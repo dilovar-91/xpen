@@ -24,6 +24,6 @@ class Dashboard extends Page
         }
 
         // Иначе — только свой салон
-        return Showroom::where('id', $user->showroom_id)->orderBy('sort')->get();
+        return Showroom::where('id', $user->showroom_id)->orderBy('sort', 'asc')->get();
     }
 }
