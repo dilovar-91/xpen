@@ -95,6 +95,7 @@ class ExpenseResource extends Resource
                 ->label('Салон')
                 ->default($showroomId)
                 ->disabled(fn () => auth()->user()->role !== 'admin')
+                ->dehydrated(true)
                 ->required(),
 
             DatePicker::make('date')
