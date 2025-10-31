@@ -20,7 +20,7 @@ class Dashboard extends Page
 
         // Если администратор — показываем все салоны
         if ($user->role === 'admin') {
-            return Showroom::all();
+            return Showroom::orderBy('sort', 'asc')->get();
         }
 
         // Иначе — только свой салон
