@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Showroom;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends Page
 {
@@ -13,9 +14,16 @@ class Dashboard extends Page
     protected string $view = 'filament.pages.expense';
     protected static ?string $slug = 'expense';
 
-    /** Получаем список салонов */
     public function getShowrooms()
     {
-        return Showroom::query()->select('id', 'name')->get();
+        $user = Auth::user();
+
+        // Если администратор — показываем все салоны
+        if ($user->role === 'admin') {
+            return Showroom::all();
+        }
+
+        // Иначе — только свой салон
+        return Showroom::where('id', $user->showroom_id)->get();
     }
 }

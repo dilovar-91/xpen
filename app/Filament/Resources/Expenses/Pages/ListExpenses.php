@@ -3,11 +3,14 @@
 namespace App\Filament\Resources\Expenses\Pages;
 
 use App\Filament\Resources\Expenses\ExpenseResource;
+use App\Models\Expense;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Form;
+use Illuminate\Support\Facades\Request;
 
 class ListExpenses extends ListRecords
 {
@@ -68,14 +71,17 @@ class ListExpenses extends ListRecords
                 ->color('success')
                 ->slideOver()
                 ->form(fn () => ExpenseResource::getExpenseForm(1))
-                ->action(fn (array $data) => \App\Models\Expense::create($data)),
+                ->action(fn (array $data) => Expense::create($data)),
             'addExpense' => Action::make('addExpense')
                 ->label('Добавить расход')
                 ->icon('heroicon-o-arrow-down-circle')
                 ->color('danger')
                 ->slideOver()
-                ->form(fn () => ExpenseResource::getExpenseForm(2))
-                ->action(fn (array $data) => \App\Models\Expense::create($data)),
+                ->schema(fn () => ExpenseResource::getExpenseForm(
+                    1,
+                    Request::route('showroom_id') ?? Request::query('showroom_id')
+                ))
+                ->action(fn (array $data) => Expense::create($data)),
 
 
             // 🔹 Редактирование записи (модалка)

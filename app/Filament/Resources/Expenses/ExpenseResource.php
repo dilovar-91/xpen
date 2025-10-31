@@ -29,6 +29,17 @@ class ExpenseResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'Expense';
 
+    public ?int $showroomId ;
+
+
+
+    public function mount(): void
+    {
+        $this->showroomId = request()->route('showroom') ?? 0;
+    }
+
+
+
     public static function form(Schema $schema): Schema
     {
         return ExpenseForm::configure($schema);
@@ -61,17 +72,34 @@ class ExpenseResource extends Resource
 
     public static function getExpenseForm(int $type): array
     {
+        // ✅ Определяем салон прямо тут
+        $showroomParam = request()->route('showroom');
+
+        $showroomId = $showroomParam instanceof \App\Models\Showroom
+            ? $showroomParam->id
+            : (int) $showroomParam;
+
+        // Если и это null, попробуем взять showroom_id пользователя
+        if (! $showroomId && auth()->check()) {
+            $showroomId = auth()->user()->showroom_id;
+        }
+
+
         return [
-            Hidden::make('type_id')->default($type),
+            Hidden::make('type_id')
+                ->default($type),
 
-
+            // ✅ Салон — заполняется автоматически и недоступен для редактирования
             Select::make('showroom_id')
                 ->relationship('showroom', 'name')
                 ->label('Салон')
+                ->default($showroomId)
+                ->disabled(fn () => auth()->user()->role !== 'admin')
                 ->required(),
 
             DatePicker::make('date')
                 ->label('Дата')
+                ->default(now()->toDateString()) // 👈 можно задать сегодняшнюю дату
                 ->required(),
 
             TextInput::make('income')
@@ -93,4 +121,5 @@ class ExpenseResource extends Resource
                 ->columnSpanFull(),
         ];
     }
+
 }

@@ -14,12 +14,21 @@ use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Form;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Table;
 
 class ExpensesTable
 {
+    public int $showroomId;
+
+    public function mount()
+    {
+        $this->showroomId = request()->route('showroom');
+        dd($this->showroomId);
+    }
+
     public static function configure(Table $table): Table
     {
         $tiny = ['class' => 'py-1 text-xs']; // <— tiny padding + font
@@ -31,12 +40,6 @@ class ExpensesTable
                 ]);
             })
             ->columns([
-                /* TextColumn::make('manager.name')
-                    ->label('Менеджер')
-                    ->sortable()
-                    ->toggleable()
-                    ->extraAttributes($tiny), */
-
                 TextColumn::make('date')
                     ->date()
                     ->label('Дата')
@@ -117,16 +120,30 @@ class ExpensesTable
                     ->icon('heroicon-o-arrow-up-circle')
                     ->color('success')
                     ->slideOver()
-                    ->form(fn () => self::getExpenseForm(1))
-                    ->action(fn (array $data) => \App\Models\Expense::create($data)),
+                    ->mountUsing(function (Form $form, $livewire) {
+
+                        $showroomId = $livewire->showroomId ?? request()->route('showroom') ?? request()->query('showroom_id');
+
+
+                        $form->schema(
+                            ExpenseResource::getExpenseForm(1, $showroomId)
+                        );
+                    })
+                    ->action(fn (array $data) => Expense::create($data)),
 
                 Action::make('addExpense')
                     ->label('Добавить расход')
                     ->icon('heroicon-o-arrow-down-circle')
                     ->color('danger')
                     ->slideOver()
-                    ->form(fn () => self::getExpenseForm(2))
-                    ->action(fn (array $data) => \App\Models\Expense::create($data)),
+                    ->mountUsing(function (Form $form, $livewire) {
+                        $showroomId = $livewire->showroomId ?? request()->route('showroom_id');
+
+                        $form->schema(
+                            ExpenseResource::getExpenseForm(2, $showroomId)
+                        );
+                    })
+                    ->action(fn (array $data) => Expense::create($data)),
             ])
             ->recordClasses(fn ($record) => $record->type_id == 1
                 ? 'bg-success-100 dark:bg-success-900/40'
