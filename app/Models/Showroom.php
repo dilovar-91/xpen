@@ -6,6 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Showroom extends Model
 {
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'sort'];
 
 }
