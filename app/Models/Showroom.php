@@ -8,4 +8,9 @@ class Showroom extends Model
 {
     protected $fillable = ['name', 'sort'];
 
+
+    protected $casts = [
+        'sort' => 'integer',
+    ];
+
 }
