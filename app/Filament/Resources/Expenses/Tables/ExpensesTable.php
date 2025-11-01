@@ -9,14 +9,8 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Form;
 use Filament\Tables\Columns\TextColumn;
-use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Table;
 
 class ExpensesTable
