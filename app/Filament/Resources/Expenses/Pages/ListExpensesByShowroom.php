@@ -79,7 +79,7 @@ class ListExpensesByShowroom extends ListRecords
 
         $user = Auth::user();
 
-        if (($user->role !== 'admin' || $user->role !== 'kassa' ) && $user->showroom_id != $this->showroomId) {
+        if (($user->role !== 'admin' && $user->role !== 'kassa' ) && $user->showroom_id != $this->showroomId) {
             abort(403, 'У вас нет доступа к этому салону.');
         }
     }
