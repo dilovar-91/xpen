@@ -19,7 +19,7 @@ class Dashboard extends Page
         $user = Auth::user();
 
         // Если администратор — показываем все салоны
-        if ($user->role === 'admin') {
+        if ($user->role === 'admin' || $user->role === 'kassa') {
             return Showroom::orderBy('sort', 'asc')->get();
         }
 

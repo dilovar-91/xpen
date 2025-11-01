@@ -156,12 +156,14 @@ class ExpensesTable
                     ->button()
                     ->size('xs')
                     ->color('success')
+                    ->visible(fn () => auth()->user()?->role === 'admin')
                     ->slideOver()
                     ->modalHeading('Редактирование'),
                 DeleteAction::make('delete')
                     ->label('Удалить')
                     ->icon('heroicon-o-trash')
                     ->button()
+                    ->visible(fn () => auth()->user()?->role === 'admin')
                     ->size('xs')
                     ->color('danger')
 
@@ -169,11 +171,9 @@ class ExpensesTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()->button()->size('xs'),
+                    DeleteBulkAction::make()->button()->size('xs')->visible(fn () => auth()->user()?->role === 'admin'),
                 ]),
             ])
-
-
             ->recordAction('edit')   // откроет EditAction при клике по строке
             ->recordClasses('cursor-pointer')
             ->columnManager(false)
