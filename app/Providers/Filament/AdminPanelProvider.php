@@ -30,6 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->maxContentWidth('full')
             ->login()
+            ->profile()
             ->colors([
                 'primary' => Color::Amber,
                 'green' => Color::Green,
