@@ -10,6 +10,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Schemas\Components\Form;
+use Filament\Tables\Columns\TagsColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -17,10 +18,12 @@ class ExpensesTable
 {
     public int $showroomId;
 
+
+
     public function mount()
     {
         $this->showroomId = request()->route('showroom');
-        dd($this->showroomId);
+
     }
 
     public static function configure(Table $table): Table
@@ -31,6 +34,7 @@ class ExpensesTable
             ->header(function ($livewire) {
                 return view('filament.expenses.date-filter-inline', [
                     'livewire' => $livewire,
+                    'allTags' => $livewire->allTags,
                 ]);
             })
             ->columns([
@@ -86,6 +90,11 @@ class ExpensesTable
                 TextColumn::make('balance')
                     ->label('Остаток на конец дня')
                     ->sortable(),
+
+                TagsColumn::make('tags')
+                    ->sortable()
+                    ->columnSpanFull()
+                    ->label('Теги'),
 
                 TextColumn::make('created_at')
                     ->dateTime()

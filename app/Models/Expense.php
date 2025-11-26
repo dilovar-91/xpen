@@ -19,7 +19,12 @@ class Expense extends Model
         'income',
         'expense',
         'balance',
+        'tags',
         'comment',
+    ];
+
+    protected $casts = [
+        'tags' => 'array',
     ];
     public function showroom()
     {

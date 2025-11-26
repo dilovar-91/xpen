@@ -51,6 +51,22 @@
             </select>
         </div>
 
+        <div class="flex flex-col">
+            <select
+                wire:model.live="tag"
+                id="tag"
+                class="w-full p-2 rounded-md border border-gray-300 dark:border-gray-700
+               bg-white dark:bg-gray-800
+               text-gray-900 dark:text-gray-100
+               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            >
+                <option value="">Все теги</option>
+                @foreach($allTags as $t)
+                    <option value="{{ $t }}">{{ $t }}</option>
+                @endforeach
+            </select>
+        </div>
+
         {{-- Кнопки фильтра --}}
         <x-filament::button wire:click="resetDates" color="success" icon="heroicon-o-check">
             Сегодня

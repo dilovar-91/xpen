@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Expenses\Schemas;
 
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Grid;
@@ -52,6 +53,20 @@ class ExpenseForm
                     ->label('Остаток на конец дня')
                     ->required()
                     ->numeric(),
+                TagsInput::make('tags')
+                    ->placeholder('Добавьте теги...')
+                    ->suggestions([
+                        'Зарплата',
+                        'Аванс',
+                        'ГСМ',
+                        'Бытовые расходы',
+                        'Канцелярия',
+                        'Полиграфия',
+                        'Разное',
+                        'Автовоз',
+                        'Доставка',
+                    ])
+                    ->label('Теги'),
                 Textarea::make('comment')
                     ->label('Комментарий')
                     ->columnSpanFull(),

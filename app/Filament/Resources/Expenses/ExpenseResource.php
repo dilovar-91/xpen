@@ -12,6 +12,7 @@ use BackedEnum;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
@@ -33,9 +34,16 @@ class ExpenseResource extends Resource
 
 
 
+
+
+
+
+
     public function mount(): void
     {
         $this->showroomId = request()->route('showroom') ?? 0;
+
+
     }
 
 
@@ -67,6 +75,9 @@ class ExpenseResource extends Resource
             //'index' => ListExpenses::route('/'),
         ];
     }
+
+
+
 
 
 
@@ -116,6 +127,21 @@ class ExpenseResource extends Resource
             TextInput::make('balance')
                 ->label('Остаток на конец дня')
                 ->numeric(),
+
+            TagsInput::make('tags')
+                ->placeholder('Добавьте теги...')
+                ->suggestions([
+                    'Зарплата',
+                    'Аванс',
+                    'ГСМ',
+                    'Бытовые расходы',
+                    'Канцелярия',
+                    'Полиграфия',
+                    'Разное',
+                    'Автовоз',
+                    'Доставка',
+                ])
+                ->label('Теги'),
 
             Textarea::make('comment')
                 ->label('Комментарий')
