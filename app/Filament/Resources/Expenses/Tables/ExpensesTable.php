@@ -75,11 +75,38 @@ class ExpensesTable
                     ->sortable()
                     ->extraAttributes($tiny),
 
+                TextColumn::make('income_type')
+                    ->label('Способ')
+                    ->badge()
+                    ->formatStateUsing(fn (string|int|null $state): string => match ($state) {
+                        1 => 'Наличка',
+                        2 => 'Безнал',
+                        default => '—',
+                    })
+                    ->color(fn (string|int|null $state): string => match ($state) {
+                        1 => 'warning',
+                        2 => 'success',
+                        default => 'gray',
+                    })
+                    ->sortable()
+                    ->extraAttributes($tiny),
+
+
+
+
                 TextColumn::make('expense')
                     ->numeric(2)
                     ->label('Расход')
                     ->sortable()
                     ->extraAttributes($tiny),
+
+                TextColumn::make('tags')
+                    ->badge()
+                    ->sortable()
+                    ->columnSpanFull()
+                    ->label('Теги'),
+
+
                 TextColumn::make('comment')
                     ->numeric(2)
                     ->label('Комментарий по расходу')
@@ -87,14 +114,18 @@ class ExpensesTable
                     ->extraAttributes($tiny),
 
 
+
+                TextColumn::make('remaining_cash')
+                    ->numeric(2)
+                    ->label('Остаток касса')
+                    ->sortable()
+                    ->extraAttributes($tiny),
+
                 TextColumn::make('balance')
                     ->label('Остаток на конец дня')
                     ->sortable(),
 
-                TagsColumn::make('tags')
-                    ->sortable()
-                    ->columnSpanFull()
-                    ->label('Теги'),
+
 
                 TextColumn::make('created_at')
                     ->dateTime()
@@ -153,6 +184,26 @@ class ExpensesTable
                 : 'bg-danger-100 dark:bg-danger-900/40')
             ->filters([])
             ->recordActions([
+
+                Action::make('accept')
+                    ->label(fn ($record) => $record->accepted == 1
+                        ? 'Принято'
+                        : 'Принять')
+                    ->icon('heroicon-o-check-circle')
+                    ->button()
+                    ->size('xs')
+                    ->color(fn ($record) => $record->accepted == 1
+                        ? 'success'
+                        : 'danger')
+                    ->visible(fn ($record) =>
+                        auth()->user()?->role === 'admin'
+                    )
+                    ->action(fn ($record) => $record->update([
+                        'accepted' => 1,
+                    ]))
+                    ->disabled(fn ($record) => $record->accepted === 1)
+                    ->requiresConfirmation(),
+
                 EditAction::make('edit')
                     ->label('Изменить')
                     ->icon('heroicon-o-pencil-square')

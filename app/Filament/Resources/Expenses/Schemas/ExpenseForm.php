@@ -46,12 +46,12 @@ class ExpenseForm
                     ->required()
                     ->label('Расход')
                     ->reactive()
-                    ->disabled(fn(callable $get) => $get('type_id') === 1)
+                    // ->disabled(fn(callable $get) => $get('type_id') === 1)
                     ->numeric(),
 
                 TextInput::make('balance')
                     ->label('Остаток на конец дня')
-                    ->required()
+                    ->nullable()
                     ->numeric(),
                 TagsInput::make('tags')
                     ->placeholder('Добавьте теги...')

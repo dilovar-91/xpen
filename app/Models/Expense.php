@@ -17,8 +17,11 @@ class Expense extends Model
         'showroom_id',
         'date',
         'income',
+        'income_type',
         'expense',
         'balance',
+        'remaining_cash',
+        'accepted',
         'tags',
         'comment',
     ];
@@ -34,4 +37,47 @@ class Expense extends Model
     {
         return $this->belongsTo(User::class, 'manager_id');
     }
+
+
+    protected static function booted()
+    {
+        static::creating(function ($record) {
+
+            // 💰 Дельта (всегда одинаковая)
+            $delta = ($record->income ?? 0) - ($record->expense ?? 0);
+
+            /**
+             * =========================
+             * 1️⃣ BALANCE (ВСЕГДА)
+             * =========================
+             */
+            $lastBalanceRecord = self::where('showroom_id', $record->showroom_id)
+                ->whereDate('date', '<=', $record->date)
+                ->orderByDesc('date')
+                ->orderByDesc('id')
+                ->first();
+
+            $lastBalance = $lastBalanceRecord?->balance ?? 0;
+
+            // баланс всегда суммируется
+            $record->balance = $lastBalance + $delta;
+
+            /**
+             * =========================
+             * 2️⃣ REMAINING CASH
+             * =========================
+             */
+            $lastCash = $lastBalanceRecord?->remaining_cash ?? 0;
+
+            if ((int) $record->income_type === 1) {
+                // влияет на кассу
+                $record->remaining_cash = $lastCash + $delta;
+            } else {
+                // не влияет на кассу
+                $record->remaining_cash = $lastCash;
+            }
+        });
+    }
+
+
 }

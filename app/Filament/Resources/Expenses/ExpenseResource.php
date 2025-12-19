@@ -30,13 +30,7 @@ class ExpenseResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'Expense';
 
-    public ?int $showroomId ;
-
-
-
-
-
-
+    public ?int $showroomId;
 
 
     public function mount(): void
@@ -45,7 +39,6 @@ class ExpenseResource extends Resource
 
 
     }
-
 
 
     public static function form(Schema $schema): Schema
@@ -60,25 +53,18 @@ class ExpenseResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
+        return [//
         ];
     }
 
     public static function getPages(): array
     {
-        return [
-            //
+        return [//
             //'create' => CreateExpense::route('/create'),
-            'showroom' => Pages\ListExpensesByShowroom::route('/showroom/{showroom}'),
-            //'edit' => EditExpense::route('/{record}/edit'),
+            'showroom' => Pages\ListExpensesByShowroom::route('/showroom/{showroom}'), //'edit' => EditExpense::route('/{record}/edit'),
             //'index' => ListExpenses::route('/'),
         ];
     }
-
-
-
-
 
 
     public static function getExpenseForm(int $type): array
@@ -86,67 +72,36 @@ class ExpenseResource extends Resource
         // ✅ Определяем салон прямо тут
         $showroomParam = request()->route('showroom');
 
-        $showroomId = $showroomParam instanceof \App\Models\Showroom
-            ? $showroomParam->id
-            : (int) $showroomParam;
+        $showroomId = $showroomParam instanceof \App\Models\Showroom ? $showroomParam->id : (int)$showroomParam;
 
         // Если и это null, попробуем взять showroom_id пользователя
-        if (! $showroomId && auth()->check()) {
+        if (!$showroomId && auth()->check()) {
             $showroomId = auth()->user()->showroom_id;
         }
 
 
-        return [
-            Hidden::make('type_id')
-                ->default($type),
+        return [Hidden::make('type_id')->default($type),
 
             // ✅ Салон — заполняется автоматически и недоступен для редактирования
-            Select::make('showroom_id')
-                ->relationship('showroom', 'name')
-                ->label('Салон')
-                ->default($showroomId)
-                ->disabled(fn () => auth()->user()->role !== 'admin')
-                ->dehydrated(true)
-                ->required(),
+            Select::make('showroom_id')->relationship('showroom', 'name')->label('Салон')->default($showroomId)->disabled(fn() => auth()->user()->role !== 'admin')->dehydrated(true)->required(),
 
-            DatePicker::make('date')
-                ->label('Дата')
-                ->default(now()->toDateString()) // 👈 можно задать сегодняшнюю дату
-                ->required(),
+            DatePicker::make('date')->label('Дата')->default(now()->toDateString()) // 👈 можно задать сегодняшнюю дату
+            ->required(),
 
             TextInput::make('income')
                 ->label('Приход')
-                ->numeric()
-                ->visible($type === 1),
+                ->numeric()->visible($type === 1),
 
-            TextInput::make('expense')
-                ->label('Расход')
-                ->numeric()
-                ->visible($type === 2),
 
-            TextInput::make('balance')
-                ->label('Остаток на конец дня')
-                ->numeric(),
+            Select::make('income_type')->label('Тип дохода')->options([1 => 'Наличка', 2 => 'Безнал',])->required(),
 
-            TagsInput::make('tags')
-                ->placeholder('Добавьте теги...')
-                ->suggestions([
-                    'Зарплата',
-                    'Аванс',
-                    'ГСМ',
-                    'Бытовые расходы',
-                    'Канцелярия',
-                    'Полиграфия',
-                    'Разное',
-                    'Автовоз',
-                    'Доставка',
-                ])
-                ->label('Теги'),
+            TextInput::make('expense')->label('Расход')->numeric()->visible($type === 2),
 
-            Textarea::make('comment')
-                ->label('Комментарий')
-                ->columnSpanFull(),
-        ];
+            TextInput::make('balance')->label('Остаток на конец дня')->numeric()->nullable(),
+
+            TagsInput::make('tags')->placeholder('Добавьте теги...')->suggestions(['Зарплата', 'Аванс', 'ГСМ', 'Бытовые расходы', 'Канцелярия', 'Полиграфия', 'Разное', 'Автовоз', 'Доставка',])->label('Теги'),
+
+            Textarea::make('comment')->label('Комментарий')->columnSpanFull(),];
     }
 
 }
