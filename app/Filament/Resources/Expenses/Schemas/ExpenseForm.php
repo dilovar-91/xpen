@@ -6,7 +6,9 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Grid;
+use Filament\Forms\Components\Checkbox;
 use Filament\Schemas\Schema;
 
 class ExpenseForm
@@ -15,7 +17,7 @@ class ExpenseForm
     {
         return $schema
             ->components([
-                /* Select::make('type_id')
+                Select::make('type_id')
                      ->label('Тип операции')
                      ->options([
                          1 => 'Приход',
@@ -23,8 +25,9 @@ class ExpenseForm
                      ])
                      ->reactive() // 👈 обязательно для динамического поведения
                      ->default(1)
+                     ->disabled()
                      ->afterStateUpdated(fn (callable $set) => $set('income', null))
-                     ->afterStateUpdated(fn (callable $set) => $set('expense', null)),
+                     ->afterStateUpdated(fn (callable $set) => $set('expense', null)), /*
                  Select::make('manager_id')
                      ->relationship('manager', 'name')
                      ->label('Менеджер'),
@@ -46,7 +49,13 @@ class ExpenseForm
                     ->required()
                     ->label('Расход')
                     ->reactive()
-                    // ->disabled(fn(callable $get) => $get('type_id') === 1)
+                    ->disabled(fn(callable $get) => $get('type_id') === 1)
+                    ->numeric(),
+
+                TextInput::make('remaining_cash')
+                    ->required()
+                    ->label('Остаток касса')
+                    ->reactive()
                     ->numeric(),
 
                 TextInput::make('balance')
@@ -70,6 +79,10 @@ class ExpenseForm
                 Textarea::make('comment')
                     ->label('Комментарий')
                     ->columnSpanFull(),
+
+                Checkbox::make('auto_calculate')
+                    ->label('Отключить авторасчет')
+                    ->reactive(),
             ]);
     }
 }

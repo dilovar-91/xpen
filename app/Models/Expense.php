@@ -43,6 +43,10 @@ class Expense extends Model
     {
         static::creating(function ($record) {
 
+             if ($record->auto_calculated) {
+                    return;
+                }
+
             // 💰 Дельта (всегда одинаковая)
             $delta = ($record->income ?? 0) - ($record->expense ?? 0);
 

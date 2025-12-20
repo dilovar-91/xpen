@@ -122,8 +122,10 @@ class ExpensesTable
                     ->extraAttributes($tiny),
 
                 TextColumn::make('balance')
+                    ->numeric(2)
                     ->label('Остаток на конец дня')
-                    ->sortable(),
+                    ->sortable()
+                    ->extraAttributes($tiny),
 
 
 
