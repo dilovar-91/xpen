@@ -47,7 +47,10 @@ class Expense extends Model
         static::creating(function ($record) {
             if ($record->type_id === 1 &&  (int) $record->income_type === 2) {
                 $record->online_cash = $record->income;
+
             }
+
+
         });
 
 
