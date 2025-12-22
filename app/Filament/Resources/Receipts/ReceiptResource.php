@@ -74,7 +74,7 @@ class ReceiptResource extends Resource
             Select::make('type_id')->label('Тип погашение')->options([1 => 'Частичная', 2 => 'Полная',])->required(),
 
 
-            Select::make('parent_id')
+            Select::make('group_id')
                 ->label('Родительский чек')
                 ->options(function () {
                     return Receipt::query()
