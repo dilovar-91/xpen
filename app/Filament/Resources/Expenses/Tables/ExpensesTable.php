@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Expenses\Tables;
 
 use App\Filament\Resources\Expenses\ExpenseResource;
+use App\Models\CashDailyBalance;
 use App\Models\Expense;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -113,19 +114,23 @@ class ExpensesTable
                     ->sortable()
                     ->extraAttributes($tiny),
 
-
-
                 TextColumn::make('remaining_cash')
                     ->numeric(2)
                     ->label('Остаток касса')
                     ->sortable()
                     ->extraAttributes($tiny),
 
-                TextColumn::make('balance')
-                    ->numeric(2)
+                TextColumn::make('test')
                     ->label('Остаток на конец дня')
-                    ->sortable()
-                    ->extraAttributes($tiny),
+                    ->getStateUsing(function ($record) {
+                        $balance = CashDailyBalance::whereDate('date', $record->date)
+                            ->where('showroom_id', $record->showroom_id)
+                            ->first();
+
+                        return $balance
+                            ? $record->date->format('d.m.Y') . " (Остаток: {$balance->closing_balance} ₽)"
+                            : $record->date->format('d.m.Y');
+                    }),
 
 
 
@@ -150,6 +155,7 @@ class ExpensesTable
                     $query->whereDate('date', '<=', $livewire->dateTo);
                 }
             })
+
             ->headerActions([
                 Action::make('addIncome')
                     ->label('Добавить приход')
@@ -200,9 +206,54 @@ class ExpensesTable
                     ->visible(fn ($record) =>
                         auth()->user()?->role === 'admin'
                     )
-                    ->action(fn ($record) => $record->update([
-                        'accepted' => 1,
-                    ]))
+                    ->action(function ($record) {
+                        // 1️⃣ Обновляем accepted у операции
+                        $record->update(['accepted' => 1]);
+
+                        // 2️⃣ Определяем дату и кассу (showroom)
+                        $date = $record->date;
+                        $showroomId = $record->showroom_id;
+
+                        // 3️⃣ Берём все операции за день для этого шоурума
+                        $operations = Expense::whereDate('date', $date)
+                            ->where('showroom_id', $showroomId)
+                            ->where('online_cash', '<=', '0')
+                            ->get();
+
+                        if ($operations->isNotEmpty()) {
+                            // 4️⃣ Считаем opening_balance по предыдущему дню
+                            $openingBalance = CashDailyBalance::where('showroom_id', $showroomId)
+                                ->whereDate('date', '<', $date)
+                                ->orderBy('date', 'desc')
+                                ->value('closing_balance') ?? 0;
+
+                            // 5️⃣ Считаем closing_balance = opening + SUM(income) - SUM(expense)
+                            $totalIncome = $operations->sum('income');
+                            $totalExpense = $operations->sum('expense');
+
+                            $closingBalance = $openingBalance + $totalIncome - $totalExpense;
+
+                            // 6️⃣ Сохраняем или обновляем запись в cash_daily_balances
+                            CashDailyBalance::updateOrCreate(
+                                [
+                                    'date' => $date,
+                                    'showroom_id' => $showroomId
+                                ],
+                                [
+                                    'opening_balance' => $openingBalance,
+                                    'closing_balance' => $closingBalance,
+                                    'approved' => true
+                                ]
+                            );
+
+                            // 7️⃣ Обновляем remaining_cash у каждой операции (опционально)
+                            $currentBalance = $openingBalance;
+                            foreach ($operations as $op) {
+                                $currentBalance += $op->income - $op->expense;
+                                $op->update(['remaining_cash' => $currentBalance]);
+                            }
+                        }
+                    })
                     ->disabled(fn ($record) => $record->accepted === 1)
                     ->requiresConfirmation(),
 

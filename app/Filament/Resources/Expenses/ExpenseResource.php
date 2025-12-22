@@ -93,11 +93,11 @@ class ExpenseResource extends Resource
                 ->numeric()->visible($type === 1),
 
 
-            Select::make('income_type')->label('Тип дохода')->options([1 => 'Наличка', 2 => 'Безнал',])->required(),
+            Select::make('income_type')->label('Тип дохода')->options([1 => 'Наличка', 2 => 'Безнал',])->visible($type === 1)->required(),
 
             TextInput::make('expense')->label('Расход')->numeric()->visible($type === 2),
 
-            TextInput::make('balance')->label('Остаток на конец дня')->numeric()->nullable(),
+            // TextInput::make('balance')->label('Остаток на конец дня')->numeric()->nullable(),
 
             TagsInput::make('tags')->placeholder('Добавьте теги...')->suggestions(['Зарплата', 'Аванс', 'ГСМ', 'Бытовые расходы', 'Канцелярия', 'Полиграфия', 'Разное', 'Автовоз', 'Доставка',])->label('Теги'),
 

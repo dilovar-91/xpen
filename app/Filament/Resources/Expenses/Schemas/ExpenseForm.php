@@ -57,11 +57,6 @@ class ExpenseForm
                     ->label('Остаток касса')
                     ->reactive()
                     ->numeric(),
-
-                TextInput::make('balance')
-                    ->label('Остаток на конец дня')
-                    ->nullable()
-                    ->numeric(),
                 TagsInput::make('tags')
                     ->placeholder('Добавьте теги...')
                     ->suggestions([
@@ -82,6 +77,7 @@ class ExpenseForm
 
                 Checkbox::make('auto_calculate')
                     ->label('Отключить авторасчет')
+                    ->visible('false')
                     ->reactive(),
             ]);
     }
