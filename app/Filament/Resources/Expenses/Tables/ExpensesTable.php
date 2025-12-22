@@ -13,6 +13,7 @@ use Filament\Actions\EditAction;
 use Filament\Schemas\Components\Form;
 use Filament\Tables\Columns\TagsColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 
 class ExpensesTable
@@ -32,6 +33,26 @@ class ExpensesTable
         $tiny = ['class' => 'py-1 text-xs']; // <— tiny padding + font
 
         return $table
+            ->defaultSort('id', 'asc')
+            ->defaultGroup('date')          // ← всегда группировать по дате
+            ->groupingSettingsHidden()      // ← скрыть выбор группировки
+            ->groups([
+                Group::make('date')
+                    ->label('Дата')
+                    ->getTitleFromRecordUsing(fn ($record) =>
+                    $record->date->format('d.m.Y')
+                    )
+                    ->getDescriptionFromRecordUsing(function ($record) {
+                        $balance = CashDailyBalance::whereDate('date', $record->date)
+                            ->where('showroom_id', $record->showroom_id)
+                            ->first();
+
+                        return $balance
+                            ? 'Остаток на конец дня: ' .
+                            number_format($balance->closing_balance, 2, '.', ' ') . ' ₽'
+                            : 'Остаток не найден';
+                    })
+            ])
             ->header(function ($livewire) {
                 return view('filament.expenses.date-filter-inline', [
                     'livewire' => $livewire,
@@ -73,6 +94,7 @@ class ExpensesTable
                 TextColumn::make('income')
                     ->numeric(2)
                     ->label('Приход')
+                    ->money('RUB', true)
                     ->sortable()
                     ->extraAttributes($tiny),
 
@@ -92,12 +114,10 @@ class ExpensesTable
                     ->sortable()
                     ->extraAttributes($tiny),
 
-
-
-
                 TextColumn::make('expense')
                     ->numeric(2)
                     ->label('Расход')
+                    ->money('RUB', true)
                     ->sortable()
                     ->extraAttributes($tiny),
 
@@ -117,24 +137,9 @@ class ExpensesTable
                 TextColumn::make('remaining_cash')
                     ->numeric(2)
                     ->label('Остаток касса')
+                    ->money('RUB', true)
                     ->sortable()
                     ->extraAttributes($tiny),
-
-                TextColumn::make('test')
-                    ->label('Остаток на конец дня')
-                    ->getStateUsing(function ($record) {
-                        $balance = CashDailyBalance::whereDate('date', $record->date)
-                            ->where('showroom_id', $record->showroom_id)
-                            ->first();
-
-                        return $balance
-                            ? $record->date->format('d.m.Y') . " (Остаток: {$balance->closing_balance} ₽)"
-                            : $record->date->format('d.m.Y');
-                    }),
-
-
-
-
 
 
                 TextColumn::make('created_at')

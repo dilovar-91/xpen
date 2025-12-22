@@ -31,3 +31,13 @@
 
     --radius-md: 0.5rem;
 }
+
+
+.fi-ta-group-header-cell {
+    background-color: skyblue; /* slate-50 */
+    color: white !important;
+}
+.dark .fi-ta-group-header-cell {
+    background-color: skyblue; /* slate-800 */
+    color: white !important;
+}
