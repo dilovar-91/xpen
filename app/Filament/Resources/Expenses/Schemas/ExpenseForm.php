@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Expenses\Schemas;
 
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -52,6 +53,7 @@ class ExpenseForm
                     ->disabled(fn(callable $get) => $get('type_id') === 1)
                     ->numeric(),
 
+
                 TextInput::make('remaining_cash')
                     ->required()
                     ->label('Остаток касса')
@@ -77,7 +79,7 @@ class ExpenseForm
 
                 Checkbox::make('auto_calculate')
                     ->label('Отключить авторасчет')
-                    ->visible('false')
+                    ->visible(false)
                     ->reactive(),
             ]);
     }

@@ -134,6 +134,9 @@ class ExpensesTable
 
 
 
+
+
+
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -192,6 +195,9 @@ class ExpensesTable
                 : 'bg-danger-100 dark:bg-danger-900/40')
             ->filters([])
             ->recordActions([
+
+
+
 
                 Action::make('accept')
                     ->label(fn ($record) => $record->accepted == 1
