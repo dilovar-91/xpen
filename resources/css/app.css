@@ -37,8 +37,8 @@
 
     --color-success-50:  #f0fdf4;
     --color-success-100: #dcfce7;
-    --color-success-500: #29c564;
-    --color-success-600: #16a34a;
+    --color-success-500: oklch(0.723 0.219 149.579);
+    --color-success-600: oklch(0.506 0.144 148.278);
 
     --color-danger-50:   #fef2f2;
     --color-danger-100:  #fee2e2;
