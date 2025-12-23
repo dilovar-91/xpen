@@ -6,18 +6,27 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::table('receipts', function (Blueprint $table) {
-            $table->foreignId('group_id')->nullable()->after('id')->constrained('receipt_groups')->nullOnDelete();
+            if (Schema::hasColumn('receipts', 'close')) {
+                $table->renameColumn('close', 'closed');
+            }
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::table('receipts', function (Blueprint $table) {
-            $table->dropForeign(['group_id']);
-            $table->dropColumn('group_id');
+            if (Schema::hasColumn('receipts', 'close')) {
+                $table->renameColumn('closed', 'close');
+            }
         });
     }
 };

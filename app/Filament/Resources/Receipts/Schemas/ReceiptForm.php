@@ -26,21 +26,7 @@ class ReceiptForm
                 Select::make('type_id')->label('Тип погашение')->options([1 => 'Частичная', 2 => 'Полная',])->required(),
 
 
-                Select::make('group_id')
-                    ->label('Родительский чек')
-                    ->options(function () {
-                        return Receipt::query()
-                            ->select('id', 'full_name', 'phone')
-                            ->get()
-                            ->mapWithKeys(fn($receipt) => [
-                                $receipt->id => "{$receipt->full_name}, {$receipt->phone}"
-                            ])
-                            ->toArray();
-                    })
-                    ->searchable()
-                    ->preload()
-                    ->nullable()
-                    ->placeholder('Выберите родительский чек, если есть'),
+
 
                 // Салон — автозаполнение, только для админа редактируем
                 Select::make('showroom_id')
@@ -97,12 +83,7 @@ class ReceiptForm
                     ->required()
                     ->rule('regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'),
 
-                // Сумма чека
-                TextInput::make('part_price')
-                    ->label('Сумма (частичная)')
-                    ->required()
-                    ->numeric()
-                    ->minValue(0),
+
 
                 // Сумма чека
                 TextInput::make('full_price')

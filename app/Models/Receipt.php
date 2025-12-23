@@ -15,17 +15,17 @@ class Receipt extends Model
         'phone',
         'comment',
         'full_price',
-        'part_price',
         'repayment_date',
         'type_id',
-        'group_id',
         'closed',
+        'closed_date',
     ];
 
     protected $casts = [
         'full_price' => 'decimal:2',
         'repayment_date' => 'date',
-        'closed' => 'datetime',
+        'closed' => 'boolean',
+        'closed_date' => 'date',
         'type_id' => 'integer',
     ];
 
@@ -35,14 +35,10 @@ class Receipt extends Model
         return $this->belongsTo(Showroom::class);
     }
 
-    public function parent()
-    {
-        return $this->belongsTo(self::class, 'group_id');
-    }
 
-    public function children()
+    public function items()
     {
-        return $this->hasMany(self::class, 'group_id');
+        return $this->hasMany(ReceiptItem::class);
     }
 }
 

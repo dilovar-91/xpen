@@ -62,8 +62,10 @@ class ExpenseResource extends Resource
         return [//
             //'create' => CreateExpense::route('/create'),
             'showroom' => Pages\ListExpensesByShowroom::route('/showroom/{showroom}'), //'edit' => EditExpense::route('/{record}/edit'),
+            'showroom-receipt-detail' => Pages\ListReceiptDetail::route('/showroom-receipt/{showroom}/detail/{id}'), //'edit' => EditExpense::route('/{record}/edit'),
+
             'showroom-receipt' => Pages\ListReceiptByShowroom::route('/showroom-receipt/{showroom}'), //'edit' => EditExpense::route('/{record}/edit'),
-            //'index' => ListExpenses::route('/'),
+             //'index' => ListExpenses::route('/'),
         ];
     }
 

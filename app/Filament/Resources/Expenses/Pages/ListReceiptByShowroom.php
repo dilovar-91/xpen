@@ -89,18 +89,6 @@ class ListReceiptByShowroom extends ListRecords
         }
     }
 
-    public function loadTags()
-    {
-        $this->allTags = Receipt::query()
-            ->whereNotNull('tags')
-            ->pluck('tags')
-            ->flatten()
-            ->unique()
-            ->sort()
-            ->values()
-            ->toArray();
-    }
-
     public function getTitle(): string
     {
         return '';
@@ -120,7 +108,7 @@ class ListReceiptByShowroom extends ListRecords
         //dd($this->type);
         return Receipt::query()
             ->when($this->type, fn($q) => $q->where('type_id', $this->type))
-            ->when($this->showroomId, fn ($q) => $q->where('showroom_id', $this->showroomId));
+            ->when($this->showroomId, fn ($q) => $q->where('showroom_id', $this->showroomId))->with('items');
     }
 
     public function getBreadcrumbs(): array
