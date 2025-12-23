@@ -36,6 +36,7 @@ class ListReceiptDetail extends ListRecords
     public ?string $type = null;
     public ?string $tag = null;
     public $id = 0;
+    public $receipt = null;
 
     public int $showroomId = 0;
 
@@ -90,6 +91,9 @@ class ListReceiptDetail extends ListRecords
         $this->id = $id;
 
 
+        $this->receipt = Receipt::findOrFail($this->id);
+
+
         $user = Auth::user();
 
         if (($user->role !== 'admin' && $user->role !== 'kassa') && $user->showroom_id != $this->showroomId) {
@@ -125,7 +129,8 @@ class ListReceiptDetail extends ListRecords
     {
         return [
             route('filament.admin.pages.expense') => 'Расходы',
-            $this->showroom?->name ?? 'Салон'
+            route('filament.admin.resources.expenses.showroom-receipt', ['showroom' => $this->showroom?->id] ) => 'Расписки ' .   $this->showroom?->name,
+            '№:'.   $this->receipt->id . ' ' . $this->receipt->full_name . ' ' . $this->receipt->date . ' (' . $this->receipt->comment .')'
         ];
     }
 
@@ -146,26 +151,37 @@ class ListReceiptDetail extends ListRecords
                 ->size('xs')
                 ->color('danger')
                 ->requiresConfirmation()
+
+                // 🔒 Делаем кнопку неактивной, если расписка уже закрыта
+                ->disabled(function () {
+                    $receipt = Receipt::find($this->id);
+
+                    return (bool)($receipt?->closed);
+                })
                 ->action(function () {
 
                     $receiptId = (int)$this->id;
 
-                    $receipt = Receipt::query()->find($receiptId);
+                    $receipt = Receipt::find($receiptId);
 
                     if (!$receipt) {
                         Notification::make()
                             ->title('Расписка не найдена')
                             ->danger()
                             ->send();
-
                         return;
                     }
 
-                    $paidSum = ReceiptItem::query()
-                        ->where('receipt_id', $receiptId)
-                        ->sum('amount');
+                    if ((bool)$receipt->closed) {
+                        Notification::make()
+                            ->title('Расписка уже закрыта')
+                            ->warning()
+                            ->send();
+                        return;
+                    }
 
-                    // сравнение денег безопасно (2 знака после запятой)
+                    $paidSum = ReceiptItem::where('receipt_id', $receiptId)->sum('amount');
+
                     if (bccomp((string)$paidSum, (string)$receipt->full_price, 2) !== 0) {
                         Notification::make()
                             ->title('Невозможно закрыть расписку')
@@ -176,23 +192,31 @@ class ListReceiptDetail extends ListRecords
                             )
                             ->danger()
                             ->send();
-
                         return;
                     }
 
-                    $receipt->update(['closed' => true,
-                        'closed_date' => now()->toDateString(),]);
-                    $expenseComment = "Деньги по расписке {$receipt->full_name} {$receipt->comment}";
-                    $data = ['type_id'=>1, 'income_type'=>1,  'showroom_id'=>$receipt->showroom_id, 'date'=>$receipt->closed_date, 'comment'=>$expenseComment, 'income'=>$receipt->full_price];
-                    Expense::create($data);
+                    $receipt->update([
+                        'closed' => true,
+                        'closed_date' => now()->toDateString(),
+                    ]);
 
-
+                    Expense::create([
+                        'type_id' => 1,
+                        'income_type' => 1,
+                        'showroom_id' => $receipt->showroom_id,
+                        'date' => $receipt->closed_date,
+                        'comment' => "Деньги по расписке {$receipt->full_name} {$receipt->comment}",
+                        'income' => $receipt->full_price,
+                    ]);
 
                     Notification::make()
                         ->title('Расписка закрыта')
                         ->success()
                         ->send();
-                })
+
+                    // 🔄 обновить страницу/таблицу
+                    $this->dispatch('$refresh');
+                }),
         };
     }
 
