@@ -23,8 +23,18 @@ class ReceiptsTable
 
         $tiny = ['class' => 'py-1 text-xs'];
         return $table
-
+            ->header(function ($livewire) {
+                return view('filament.receipt.date-filter-inline', [
+                    'livewire' => $livewire,
+                ]);
+            })
             ->columns([
+
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->label('Дата создание')
+                    ->sortable()
+                    ->extraAttributes($tiny),
 
                 TextColumn::make('full_name')
                     ->label('ФИО')
@@ -94,6 +104,18 @@ class ReceiptsTable
 
 
             ])
+            ->modifyQueryUsing(function ($query, $livewire) {
+                if ($livewire->dateFrom) {
+                    $query->whereDate('created_at', '>=', $livewire->dateFrom);
+                }
+                if ($livewire->dateTo) {
+                    $query->whereDate('created_at', '<=', $livewire->dateTo);
+                }
+
+                if ($livewire->type) {
+                    $query->where('type_id', $livewire->type);
+                }
+            })
             ->recordClasses(fn($record) => $record->type_id == 1
                 ? 'bg-success-100 dark:bg-success-900/40'
                 : 'bg-danger-100 dark:bg-danger-900/40')

@@ -22,14 +22,12 @@ class ListReceiptByShowroom extends ListRecords
     public ?string $dateFrom = null;
     public ?string $dateTo = null;
     public ?string $type = null;
-    public ?string $tag = null;
-    public $allTags = [];
 
     public int $showroomId = 0;
 
 
 
-    public function resetDates(): void
+    public function setToday(): void
     {
         $today = now()->toDateString();
         $this->dateFrom = $today;
@@ -38,18 +36,12 @@ class ListReceiptByShowroom extends ListRecords
 
 
 
-    public function resetTwoDates(): void
+    public function resetWeek(): void
     {
-        $today = now()->toDateString();
-        $yesterday = Carbon::yesterday()->toDateString();
+        $this->dateFrom = Carbon::now()->startOfWeek()->toDateString();
+        $this->dateTo   = Carbon::now()->endOfWeek()->toDateString();
 
-        $this->dateFrom = $yesterday;
-        $this->dateTo = $today;
-
-        $this->dispatch('$refresh'); // Livewire v3
-
-        // Если используется Filament Tables, можно обновить таблицу
-        //$this->dispatch('updateTable');
+        $this->dispatch('$refresh');
     }
 
     public function clearDates(): void
@@ -57,7 +49,6 @@ class ListReceiptByShowroom extends ListRecords
         $this->dateFrom = null;
         $this->dateTo = null;
         $this->type = null;
-        $this->tag = null;
 
         // ✅ Если showroom куда-то делся — восстанавливаем
         if (! $this->showroom && $this->showroomId) {
@@ -77,8 +68,8 @@ class ListReceiptByShowroom extends ListRecords
         }
 
         $today = Carbon::today()->toDateString();
-        $this->dateFrom = $today;
-        $this->dateTo = $today;
+        $this->dateFrom = null;
+        $this->dateTo = null;
 
 
 

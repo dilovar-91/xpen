@@ -145,7 +145,6 @@ class ExpensesTable
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
                     ->extraAttributes($tiny),
 
                 TextColumn::make('updated_at')
