@@ -134,7 +134,7 @@ class ReceiptsTable
 
             ->recordClasses(fn ($record) => [
                 'bg-green-500 text-white' => $record->approved === true,
-                'bg-red-500' => $record->approved === false,
+                //'bg-red-500' => $record->approved === false,
             ])
             ->filters([])
             ->recordActions([
