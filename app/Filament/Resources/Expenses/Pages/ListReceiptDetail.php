@@ -130,7 +130,7 @@ class ListReceiptDetail extends ListRecords
         return [
             route('filament.admin.pages.expense') => 'Расходы',
             route('filament.admin.resources.expenses.showroom-receipt', ['showroom' => $this->showroom?->id] ) => 'Расписки ' .   $this->showroom?->name,
-            '№:'.   $this->receipt->id . ' ' . $this->receipt->full_name . ' ' . $this->receipt->date . ' (' . $this->receipt->comment .')'
+            '№:'.   $this->receipt->id . ' ' . $this->receipt->full_name . ' на сумму ' . number_format( $this->receipt->full_price, 2) .' '. $this->receipt->date . ' (' . $this->receipt->comment .')'
         ];
     }
 
