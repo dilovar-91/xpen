@@ -13,11 +13,15 @@ class Receipt extends Model
         'showroom_id',
         'full_name',
         'phone',
+        'car_mark',
+        'car_model',
+        'vin_number',
         'comment',
         'full_price',
         'repayment_date',
         'type_id',
         'closed',
+        'approved',
         'closed_date',
     ];
 
@@ -27,6 +31,7 @@ class Receipt extends Model
         'closed' => 'boolean',
         'closed_date' => 'date',
         'type_id' => 'integer',
+        'approved' => 'boolean',
     ];
 
     // Связь с салоном

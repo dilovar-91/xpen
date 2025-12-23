@@ -15,6 +15,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class ReceiptsTable
 {
@@ -43,6 +44,20 @@ class ReceiptsTable
 
                 TextColumn::make('phone')
                     ->label('Телефон')
+                    ->sortable()
+                    ->extraAttributes($tiny),
+
+
+                TextColumn::make('car_mark')
+                    ->label('Марка')
+                    ->sortable()
+                    ->extraAttributes($tiny),
+                TextColumn::make('car_model')
+                    ->label('Модель')
+                    ->sortable()
+                    ->extraAttributes($tiny),
+                TextColumn::make('vin_number')
+                    ->label('VIN номер')
                     ->sortable()
                     ->extraAttributes($tiny),
 
@@ -116,14 +131,45 @@ class ReceiptsTable
                     $query->where('type_id', $livewire->type);
                 }
             })
-            ->recordClasses(fn($record) => $record->type_id == 1
-                ? 'bg-success-100 dark:bg-success-900/40'
-                : 'bg-danger-100 dark:bg-danger-900/40')
+
+            ->recordClasses(fn ($record) => [
+                'bg-green-500 text-white' => $record->approved === true,
+                'bg-red-500' => $record->approved === false,
+            ])
             ->filters([])
             ->recordActions([
 
+                Action::make('accept')
+                    ->label(fn ($record) => $record->approved == 1
+                        ? 'Принятa'
+                        : 'Принять')
+                    ->icon('heroicon-o-check-circle')
+                    ->button()
+                    ->size('xs')
+                    ->color(fn ($record) => $record->approved == 1
+                        ? 'success'
+                        : 'danger')
+                    ->visible(fn ($record) =>
+                        auth()->user()?->role === 'admin'
+                    )
+                    ->action(function ($record) {
+                        $record->update(['approved' => 1]);
+                    })
+                    ->disabled(fn ($record) => $record->approved === 1)
+                    ->requiresConfirmation(),
+
                 EditAction::make('edit')
                     ->label('Изменить')
+                    ->icon('heroicon-o-pencil-square')
+                    ->button()
+                    ->size('xs')
+                    ->slideOver()
+                    ->color('warning')
+                    ->visible(fn() => auth()->user()?->role === 'admin')
+                    ->modalHeading('Редактирование'),
+
+                EditAction::make('goto')
+                    ->label('К оплатам')
                     ->icon('heroicon-o-pencil-square')
                     ->button()
                     ->size('xs')
@@ -150,7 +196,7 @@ class ReceiptsTable
                 ]),
             ])
             ->recordAction('edit')   // откроет EditAction при клике по строке
-            ->recordClasses('cursor-pointer')
+
             ->columnManager(false)
             ->striped()->defaultPaginationPageOption(30);
     }

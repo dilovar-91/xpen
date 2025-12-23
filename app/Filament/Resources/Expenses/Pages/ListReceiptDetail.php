@@ -151,6 +151,7 @@ class ListReceiptDetail extends ListRecords
                 ->size('xs')
                 ->color('danger')
                 ->requiresConfirmation()
+                ->visible(false)
 
                 // 🔒 Делаем кнопку неактивной, если расписка уже закрыта
                 ->disabled(function () {
@@ -248,7 +249,7 @@ class ListReceiptDetail extends ListRecords
 
 
             TextInput::make('amount')
-                ->label('Сумма погашение')
+                ->label('Сумма погашения')
                 ->required()
                 ->numeric()
                 ->minValue(0),

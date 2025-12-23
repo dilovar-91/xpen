@@ -3,6 +3,9 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
+@source './vendor/filament/**/*.blade.php';
+@source  './app/Filament/**/*.php';
+
 @source '../**/*.js';
 
 
@@ -30,6 +33,17 @@
     --color-blue-950: #172f54;
 
     --radius-md: 0.5rem;
+
+
+    --color-success-50:  #f0fdf4;
+    --color-success-100: #dcfce7;
+    --color-success-500: #29c564;
+    --color-success-600: #16a34a;
+
+    --color-danger-50:   #fef2f2;
+    --color-danger-100:  #fee2e2;
+    --color-danger-500:  #ef4444;
+    --color-danger-600:  #dc2626;
 }
 
 
