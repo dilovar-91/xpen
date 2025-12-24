@@ -60,29 +60,36 @@ class ExpensesTable
                         $date = $record->date->toDateString();
                         $showroomId = (int) $record->showroom_id;
 
-                        // Для передачи в JS / Livewire лучше передавать 0 или null
-                        $valueForJs = $valueNumber ?? 'null';
+                        $valueForJs = $valueNumber !== null ? $valueNumber : 'null';
 
-                        return new HtmlString("
-                            <div class='flex items-center justify-between gap-2'>
-                                <div>
-                                    <span class='text-gray-600'>Остаток на конец дня:</span>
-                                    <span class='font-semibold'>{$valueFormatted}</span>
-                                </div>
+                        $isAdmin = auth()->user()?->role === 'admin';
 
-                                <button
-                                    type='button'
-                                    class='text-primary-600 hover:underline text-sm'
-                                    wire:click=\"mountTableAction(
-                                        'editClosingBalance',
-                                        null,
-                                        { date: '{$date}', showroom_id: {$showroomId}, closing_balance: {$valueForJs} }
-                                    )\"
-                                >
-                                    Изменить
-                                </button>
+                        $buttonHtml = $isAdmin
+                            ? "
+                            <button
+                                type='button'
+                                class='fi-link fi-size-sm fi-color-primary text-white'
+                                wire:click=\"mountTableAction(
+                                    'editClosingBalance',
+                                    null,
+                                    { date: '{$date}', showroom_id: {$showroomId}, closing_balance: {$valueForJs} }
+                                )\"
+                            >
+                                Изменить
+                            </button>
+                          "
+                                            : "";
+
+                                        return new HtmlString("
+                        <div class='flex items-center justify-between gap-2'>
+                            <div>
+                                <span class='text-gray-600'>Остаток на конец дня:</span>
+                                <span class='font-semibold'>{$valueFormatted}</span>
                             </div>
-                        ");
+
+                            {$buttonHtml}
+                        </div>
+                    ");
                     })
             ])
             ->header(function ($livewire) {
