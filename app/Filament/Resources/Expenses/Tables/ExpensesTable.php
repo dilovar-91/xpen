@@ -10,11 +10,14 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Form;
 use Filament\Tables\Columns\TagsColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
+use NumberFormatter;
 
 class ExpensesTable
 {
@@ -43,14 +46,43 @@ class ExpensesTable
                     $record->date->format('d.m.Y')
                     )
                     ->getDescriptionFromRecordUsing(function ($record) {
+
                         $balance = CashDailyBalance::whereDate('date', $record->date)
                             ->where('showroom_id', $record->showroom_id)
                             ->first();
 
-                        return $balance
-                            ? 'Остаток на конец дня: ' .
-                            number_format($balance->closing_balance, 2, '.', ' ') . ' ₽'
+                        $valueNumber = $balance ? (float) $balance->closing_balance : null;
+
+                        $valueFormatted = $balance
+                            ? number_format($balance->closing_balance, 0, '', ' ') . ' ₽'
                             : 'Остаток не найден';
+
+                        $date = $record->date->toDateString();
+                        $showroomId = (int) $record->showroom_id;
+
+                        // Для передачи в JS / Livewire лучше передавать 0 или null
+                        $valueForJs = $valueNumber ?? 'null';
+
+                        return new HtmlString("
+                            <div class='flex items-center justify-between gap-2'>
+                                <div>
+                                    <span class='text-gray-600'>Остаток на конец дня:</span>
+                                    <span class='font-semibold'>{$valueFormatted}</span>
+                                </div>
+
+                                <button
+                                    type='button'
+                                    class='text-primary-600 hover:underline text-sm'
+                                    wire:click=\"mountTableAction(
+                                        'editClosingBalance',
+                                        null,
+                                        { date: '{$date}', showroom_id: {$showroomId}, closing_balance: {$valueForJs} }
+                                    )\"
+                                >
+                                    Изменить
+                                </button>
+                            </div>
+                        ");
                     })
             ])
             ->header(function ($livewire) {
@@ -94,12 +126,19 @@ class ExpensesTable
                 TextColumn::make('income')
                     ->numeric(2)
                     ->label('Приход')
-                    ->money('RUB', true)
+                    ->formatStateUsing(function ($state) {
+                        if ($state === null) return null;
+
+                        $fmt = new NumberFormatter('ru_RU', NumberFormatter::CURRENCY);
+                        $fmt->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
+
+                        return $fmt->formatCurrency((float) $state, 'RUB');
+                    })
                     ->sortable()
                     ->extraAttributes($tiny),
 
                 TextColumn::make('income_type')
-                    ->label('Способ')
+                    ->label('Способ оплаты')
                     ->badge()
                     ->formatStateUsing(fn (string|int|null $state): string => match ($state) {
                         1 => 'Наличка',
@@ -117,7 +156,14 @@ class ExpensesTable
                 TextColumn::make('expense')
                     ->numeric(2)
                     ->label('Расход')
-                    ->money('RUB', true)
+                    ->formatStateUsing(function ($state) {
+                        if ($state === null) return null;
+
+                        $fmt = new NumberFormatter('ru_RU', NumberFormatter::CURRENCY);
+                        $fmt->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
+
+                        return $fmt->formatCurrency((float) $state, 'RUB');
+                    })
                     ->sortable()
                     ->extraAttributes($tiny),
 
@@ -137,7 +183,14 @@ class ExpensesTable
                 TextColumn::make('remaining_cash')
                     ->numeric(2)
                     ->label('Остаток касса')
-                    ->money('RUB', true)
+                    ->formatStateUsing(function ($state) {
+                        if ($state === null) return null;
+
+                        $fmt = new NumberFormatter('ru_RU', NumberFormatter::CURRENCY);
+                        $fmt->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
+
+                        return $fmt->formatCurrency((float) $state, 'RUB');
+                    })
                     ->sortable()
                     ->extraAttributes($tiny),
 
@@ -162,6 +215,8 @@ class ExpensesTable
                     $query->whereDate('date', '<=', $livewire->dateTo);
                 }
             })
+
+
 
             ->headerActions([
                 Action::make('addIncome')
@@ -200,9 +255,61 @@ class ExpensesTable
             ->filters([])
             ->recordActions([
 
+                Action::make('editClosingBalance')
+                    ->label('Изменить остаток')
+                    ->hiddenLabel()
 
+                    ->modalHeading(function (Action $action) {
+                        $args = $action->getArguments();
 
+                        return 'Изменить остаток на конец дня: ' .
+                            \Carbon\Carbon::parse($args['date'])->format('d.m.Y');
+                    })
+                    ->modalSubmitActionLabel('Сохранить')
+                    ->fillForm(function (array $arguments) {
+                        return [
+                            'closing_balance' => $arguments['closing_balance']
+                                ?? CashDailyBalance::whereDate('date', $arguments['date'])
+                                    ->where('showroom_id', $arguments['showroom_id'])
+                                    ->value('closing_balance') ?? 0,
+                        ];
+                    })
+                    ->schema([
+                        TextInput::make('closing_balance')
+                            ->label('Остаток на конец дня')
+                            ->numeric()
+                            ->required()
+                            ->default(function (Action $action) {
+                                $args = $action->getArguments();
+                                //dd($args);
+                                return $args['closing_balance'];
 
+                                // ✅ 1) если передали значение из группы — используем его
+                                if (array_key_exists('closing_balance', $args) && $args['closing_balance'] !== null) {
+                                    return (float) $args['closing_balance'];
+                                }
+
+                                // ✅ 2) иначе — берём из БД
+                                return CashDailyBalance::whereDate('date', $args['date'] ?? null)
+                                    ->where('showroom_id', $args['showroom_id'] ?? null)
+                                    ->value('closing_balance') ?? 0;
+                            }),
+                    ])
+                    ->action(function (Action $action, array $data) {
+                        $args = $action->getArguments();
+
+                        CashDailyBalance::updateOrCreate(
+                            [
+                                'date' => $args['date'],
+                                'showroom_id' => $args['showroom_id'],
+                            ],
+                            [
+                                'closing_balance' => (float) $data['closing_balance'],
+                                'manually_changed'  => 1,
+                            ]
+                        );
+                    })
+                    ->successNotificationTitle('Остаток обновлён'),
                 Action::make('accept')
                     ->label(fn ($record) => $record->accepted == 1
                         ? 'Принято'
@@ -229,6 +336,35 @@ class ExpensesTable
                             ->where('showroom_id', $showroomId)
                             ->where('online_cash', '<=', '0')
                             ->get();
+
+                        $dailyBalance = CashDailyBalance::query()
+                            ->whereDate('date', $date)
+                            ->where('showroom_id', $showroomId)
+                            ->first();
+
+                        if ($dailyBalance?->manually_changed) {
+
+                            // есть ли операции после updated_at баланса?
+                            $hasOperationsAfterManual = Expense::query()
+                                ->whereDate('date', $date)
+                                ->where('showroom_id', $showroomId)
+                                ->where('online_cash', '<=', 0)
+                                ->where(function ($q) use ($dailyBalance) {
+                                    $q->where('created_at', '>', $dailyBalance->updated_at)
+                                        ->orWhere('updated_at', '>', $dailyBalance->updated_at);
+                                })
+                                ->exists();
+
+                            // ✅ Если после ручного изменения операций не было — ничего не пересчитываем
+                            if (! $hasOperationsAfterManual) {
+                                return;
+                            }
+
+                            // ✅ Если операции были — снимаем ручной режим, чтобы пересчитать
+                            $dailyBalance->update([
+                                'manually_changed' => 0,
+                            ]);
+                        }
 
                         if ($operations->isNotEmpty()) {
                             // 4️⃣ Считаем opening_balance по предыдущему дню

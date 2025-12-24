@@ -46,12 +46,19 @@ class Expense extends Model
     {
         static::creating(function ($record) {
 
-            if($record->income_type === null) {
+            if ($record->income_type === null) {
                 $record->income_type = 1;
             }
 
-            // 1️⃣ Ищем предыдущую запись
-            $previous = self::query()
+            // ✅ 1) Найдём последний дневной баланс ДО текущей даты
+            $prevDailyBalance = CashDailyBalance::query()
+                ->where('showroom_id', $record->showroom_id)
+                ->whereDate('date', '<', $record->date)
+                ->orderBy('date', 'desc')
+                ->first();
+
+            // ✅ 2) Найдём последнюю операцию ДО текущей (старая логика)
+            $previousExpense = self::query()
                 ->where('showroom_id', $record->showroom_id)
                 ->where(function ($q) use ($record) {
                     $q->whereDate('date', $record->date)
@@ -61,9 +68,30 @@ class Expense extends Model
                 ->orderBy('id', 'desc')
                 ->first();
 
-            $previousRemaining = $previous?->remaining_cash ?? 0;
+            $previousRemaining = $previousExpense?->remaining_cash ?? 0;
 
-            // 2️⃣ Онлайн-приход — не влияет на кассу
+            // ✅ 3) Если дневной баланс был изменён вручную —
+            // и после этого НЕ было новых операций за тот день,
+            // то в качестве базы используем closing_balance
+            if ($prevDailyBalance?->manually_changed) {
+
+                $hasOperationsAfterManualForThatDay = Expense::query()
+                    ->whereDate('date', $prevDailyBalance->date)
+                    ->where('showroom_id', $record->showroom_id)
+                    ->where('online_cash', '<=', 0)
+                    ->where(function ($q) use ($prevDailyBalance) {
+                        $q->where('created_at', '>', $prevDailyBalance->updated_at)
+                            ->orWhere('updated_at', '>', $prevDailyBalance->updated_at);
+                    })
+                    ->exists();
+
+                // ✅ Если после ручного изменения ничего не было — берем closing_balance
+                if (! $hasOperationsAfterManualForThatDay) {
+                    $previousRemaining = (float) $prevDailyBalance->closing_balance;
+                }
+            }
+
+            // ✅ 4) Онлайн-приход — не влияет на кассу
             if (
                 (int) $record->type_id === 1 &&
                 (int) $record->income_type === 2
@@ -73,19 +101,20 @@ class Expense extends Model
                 return;
             }
 
-            // 3️⃣ Обычный расчёт кассы
+            // ✅ 5) Обычный расчёт кассы от выбранной базы
             $record->remaining_cash =
                 $previousRemaining
                 + ($record->income ?? 0)
                 - ($record->expense ?? 0);
         });
+
         static::updating(function ($record) {
             if ($record->isDirty(['income', 'expense', 'type_id', 'income_type', 'showroom_id'])) {
                 $record->accepted = 0;
             }
         });
-
     }
+
 
 
 }

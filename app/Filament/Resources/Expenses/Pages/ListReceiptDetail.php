@@ -24,6 +24,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Auth;
+use NumberFormatter;
 
 class ListReceiptDetail extends ListRecords
 {
@@ -53,7 +54,14 @@ class ListReceiptDetail extends ListRecords
 
                 TextColumn::make('amount')
                     ->label('Сумма')
-                    ->money('RUB', true)
+                    ->formatStateUsing(function ($state) {
+                        if ($state === null) return null;
+
+                        $fmt = new NumberFormatter('ru_RU', NumberFormatter::CURRENCY);
+                        $fmt->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
+
+                        return $fmt->formatCurrency((float) $state, 'RUB');
+                    })
                     ->sortable(),
 
                 TextColumn::make('comment')

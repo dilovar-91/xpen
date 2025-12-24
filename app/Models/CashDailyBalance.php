@@ -18,6 +18,7 @@ class CashDailyBalance extends Model
         'opening_balance',
         'closing_balance',
         'approved',
+        'manually_changed'
     ];
 
     // Типы данных
@@ -26,6 +27,7 @@ class CashDailyBalance extends Model
         'opening_balance' => 'decimal:2',
         'closing_balance' => 'decimal:2',
         'approved' => 'boolean',
+        'manually_changed' => 'boolean',
     ];
 
     /**

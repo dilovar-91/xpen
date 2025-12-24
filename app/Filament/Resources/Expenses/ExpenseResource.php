@@ -96,7 +96,7 @@ class ExpenseResource extends Resource
                 ->numeric()->visible($type === 1),
 
 
-            Select::make('income_type')->label('Тип дохода')->options([1 => 'Наличка', 2 => 'Безнал',])->visible($type === 1)->required(),
+            Select::make('income_type')->label('Тип прихода')->options([1 => 'Наличка', 2 => 'Безнал',])->visible($type === 1)->required(),
 
             TextInput::make('expense')->label('Расход')->numeric()->visible($type === 2),
 

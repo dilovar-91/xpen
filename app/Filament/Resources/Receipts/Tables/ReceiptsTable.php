@@ -16,6 +16,7 @@ use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use NumberFormatter;
 
 class ReceiptsTable
 {
@@ -94,8 +95,15 @@ class ReceiptsTable
 
 
                 TextColumn::make('full_price')
-                    ->numeric(2)
-                    ->money('RUB', true)
+                    ->numeric(0, thousandsSeparator: ' ')
+                    ->formatStateUsing(function ($state) {
+                        if ($state === null) return null;
+
+                        $fmt = new NumberFormatter('ru_RU', NumberFormatter::CURRENCY);
+                        $fmt->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
+
+                        return $fmt->formatCurrency((float) $state, 'RUB');
+                    })
                     ->label('Полная сумма')
                     ->sortable()
                     ->extraAttributes($tiny),

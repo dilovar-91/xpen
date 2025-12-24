@@ -46,7 +46,7 @@ class ExpenseForm
                     ->disabled(fn(callable $get) => $get('type_id') === 2)
                     ->numeric(),
 
-                Select::make('income_type')->disabled()->label('Тип дохода')->options([1 => 'Наличка', 2 => 'Безнал',])->visible(fn(callable $get) => $get('type_id') === 2)->required(),
+                Select::make('income_type')->disabled()->label('Тип прихода')->options([1 => 'Наличка', 2 => 'Безнал',])->visible(fn(callable $get) => $get('type_id') === 2)->required(fn(callable $get) => $get('type_id') === 1),
 
 
                 TextInput::make('expense')
