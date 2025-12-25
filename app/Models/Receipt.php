@@ -23,6 +23,7 @@ class Receipt extends Model
         'closed',
         'approved',
         'closed_date',
+        'file',
     ];
 
     protected $casts = [

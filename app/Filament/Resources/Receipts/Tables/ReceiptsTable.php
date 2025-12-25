@@ -11,6 +11,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Schemas\Components\Form;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Grouping\Group;
@@ -118,6 +119,19 @@ class ReceiptsTable
                     ->label('Оплаты')
                     ->view('filament.tables.receipt-items')
                     ->extraAttributes(['class' => 'p-0']),
+
+                TextColumn::make('file')
+                    ->label('Файл')
+                    ->formatStateUsing(fn ($state) => $state ? 'Скачать' : '-')
+                    ->url(fn ($record) => $record->file
+                        ? asset('storage/' . $record->file)
+                        : null
+                    )
+                    ->openUrlInNewTab()
+                    ->badge()
+                    ->color('primary'),
+
+
 
                 TextColumn::make('comment')
                     ->numeric(2)

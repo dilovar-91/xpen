@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Receipts\Schemas;
 use App\Models\Receipt;
 use App\Models\Showroom;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -105,6 +106,19 @@ class ReceiptForm
 
                     DatePicker::make('repayment_date')
                         ->label('Дата погашения'),
+
+                    FileUpload::make('file')
+                        ->label('Файл расписки')
+                        ->disk('public')
+                        ->directory('receipts')
+                        ->preserveFilenames()
+                        ->downloadable()
+                        ->openable()
+                        ->maxSize(10240) // 10 MB
+                        ->acceptedFileTypes([
+                            'application/pdf',
+                            'image/*',
+                        ]),
                 ]),
 
                 Textarea::make('comment')
