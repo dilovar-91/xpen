@@ -69,20 +69,7 @@ class ExpenseForm
                     ->preload()
                     ->required()
                     ->placeholder('Выберите тег'),
-                TagsInput::make('tags')
-                    ->placeholder('Добавьте теги...')
-                    ->suggestions([
-                        'Зарплата',
-                        'Аванс',
-                        'ГСМ',
-                        'Бытовые расходы',
-                        'Канцелярия',
-                        'Полиграфия',
-                        'Разное',
-                        'Автовоз',
-                        'Доставка',
-                    ])
-                    ->label('Теги'),
+
                 Textarea::make('comment')
                     ->label('Комментарий')
                     ->columnSpanFull(),

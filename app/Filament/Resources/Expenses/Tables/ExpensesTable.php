@@ -199,7 +199,6 @@ class ExpensesTable
                     ->label('Тег')
                     ->badge()
                     ->sortable()
-                    ->searchable()
                     ->color('danger'),
 
 
