@@ -22,8 +22,7 @@ class ListExpensesByShowroom extends ListRecords
     public ?string $dateFrom = null;
     public ?string $dateTo = null;
     public ?string $type = null;
-    public ?string $tag = null;
-    public $allTags = [];
+    public ?int $tag_id = 0;
 
     public int $showroomId = 0;
 
@@ -57,7 +56,7 @@ class ListExpensesByShowroom extends ListRecords
         $this->dateFrom = null;
         $this->dateTo = null;
         $this->type = null;
-        $this->tag = null;
+        $this->tag_id = null;
 
         // ✅ Если showroom куда-то делся — восстанавливаем
         if (! $this->showroom && $this->showroomId) {
@@ -81,29 +80,11 @@ class ListExpensesByShowroom extends ListRecords
         $this->dateTo = $today;
 
 
-
-        $this->loadTags();
-
-        // dd($this->allTags);
-
-
         $user = Auth::user();
 
         if (($user->role !== 'admin' && $user->role !== 'kassa' ) && $user->showroom_id != $this->showroomId) {
             abort(403, 'У вас нет доступа к этому салону.');
         }
-    }
-
-    public function loadTags()
-    {
-        $this->allTags = Expense::query()
-            ->whereNotNull('tags')
-            ->pluck('tags')
-            ->flatten()
-            ->unique()
-            ->sort()
-            ->values()
-            ->toArray();
     }
 
     public function getTitle(): string
@@ -126,7 +107,7 @@ class ListExpensesByShowroom extends ListRecords
         //dd($this->type);
         return Expense::query()
             ->when($this->type, fn($q) => $q->where('type_id', $this->type))
-            ->when($this->tag, fn ($q) => $q->whereJsonContains('tags', $this->tag))
+            ->when($this->tag_id, fn($query) => $query->where('tag_id', $this->tag_id))
             ->when($this->showroomId, fn ($q) => $q->where('showroom_id', $this->showroomId));
     }
 

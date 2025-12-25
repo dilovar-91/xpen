@@ -62,6 +62,13 @@ class ExpenseForm
                     ->label('Остаток касса')
                     ->reactive()
                     ->numeric(),
+                Select::make('tag_id')
+                    ->label('Тег')
+                    ->relationship('tag', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->required()
+                    ->placeholder('Выберите тег'),
                 TagsInput::make('tags')
                     ->placeholder('Добавьте теги...')
                     ->suggestions([

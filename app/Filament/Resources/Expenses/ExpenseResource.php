@@ -102,7 +102,15 @@ class ExpenseResource extends Resource
 
             // TextInput::make('balance')->label('Остаток на конец дня')->numeric()->nullable(),
 
-            TagsInput::make('tags')->placeholder('Добавьте теги...')->suggestions(['Зарплата', 'Аванс', 'ГСМ', 'Бытовые расходы', 'Канцелярия', 'Полиграфия', 'Разное', 'Автовоз', 'Доставка',])->label('Теги'),
+            Select::make('tag_id')
+                ->label('Тег')
+                ->relationship('tag', 'name')
+                ->searchable()
+                ->preload()
+                ->required()
+                ->placeholder('Выберите тег'),
+
+            // TagsInput::make('tags')->placeholder('Добавьте теги...')->suggestions(['Зарплата', 'Аванс', 'ГСМ', 'Бытовые расходы', 'Канцелярия', 'Полиграфия', 'Разное', 'Автовоз', 'Доставка',])->label('Теги'),
 
             Textarea::make('comment')->label('Комментарий')->columnSpanFull(),];
     }

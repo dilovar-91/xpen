@@ -114,9 +114,11 @@ class ExpensesTable
             ->header(function ($livewire) {
                 return view('filament.expenses.date-filter-inline', [
                     'livewire' => $livewire,
-                    'allTags' => $livewire->allTags,
                 ]);
             })
+
+            ->defaultPaginationPageOption(100)
+            ->paginationPageOptions([25, 50, 100, 200])
             ->columns([
                 TextColumn::make('date')
                     ->date()
@@ -193,11 +195,12 @@ class ExpensesTable
                     ->sortable()
                     ->extraAttributes($tiny),
 
-                TextColumn::make('tags')
+                TextColumn::make('tag.name')
+                    ->label('Тег')
                     ->badge()
                     ->sortable()
-                    ->columnSpanFull()
-                    ->label('Теги'),
+                    ->searchable()
+                    ->color('danger'),
 
 
                 TextColumn::make('comment')
