@@ -131,8 +131,6 @@ class ReceiptsTable
                     ->badge()
                     ->color('primary'),
 
-
-
                 TextColumn::make('comment')
                     ->numeric(2)
                     ->label('Комментарий')
