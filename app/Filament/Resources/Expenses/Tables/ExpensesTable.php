@@ -47,20 +47,33 @@ class ExpensesTable
                     )
                     ->getDescriptionFromRecordUsing(function ($record) {
 
-                        $balance = CashDailyBalance::whereDate('date', $record->date)
+                        // 🔹 Текущий день
+                        $balanceToday = CashDailyBalance::whereDate('date', $record->date)
                             ->where('showroom_id', $record->showroom_id)
                             ->first();
 
-                        $valueNumber = $balance ? (float) $balance->closing_balance : null;
+                        $todayValue = $balanceToday
+                            ? number_format($balanceToday->closing_balance, 0, '', ' ') . ' ₽'
+                            : 'Не найден';
 
-                        $valueFormatted = $balance
-                            ? number_format($balance->closing_balance, 0, '', ' ') . ' ₽'
-                            : 'Остаток не найден';
+                        $todayValueNumber = $balanceToday
+                            ? (float) $balanceToday->closing_balance
+                            : null;
 
+                        // 🔹 Предыдущий день
+                        $balancePrev = CashDailyBalance::whereDate('date', '<', $record->date)
+                            ->where('showroom_id', $record->showroom_id)
+                            ->orderByDesc('date')
+                            ->first();
+
+                        $prevValue = $balancePrev
+                            ? number_format($balancePrev->closing_balance, 0, '', ' ') . ' ₽'
+                            : 'Не найден';
+
+                        // 🔹 Для кнопки
                         $date = $record->date->toDateString();
                         $showroomId = (int) $record->showroom_id;
-
-                        $valueForJs = $valueNumber !== null ? $valueNumber : 'null';
+                        $valueForJs = $todayValueNumber !== null ? $todayValueNumber : 'null';
 
                         $isAdmin = auth()->user()?->role === 'admin';
 
@@ -68,7 +81,7 @@ class ExpensesTable
                             ? "
                             <button
                                 type='button'
-                                class='fi-link fi-size-sm fi-color-primary text-white'
+                                class='fi-link fi-size-sm fi-color-primary'
                                 wire:click=\"mountTableAction(
                                     'editClosingBalance',
                                     null,
@@ -77,17 +90,23 @@ class ExpensesTable
                             >
                                 Изменить
                             </button>
-                          "
-                                            : "";
+                        "
+                                            : '';
 
-                                        return new HtmlString("
-                        <div class='flex items-center justify-between gap-2'>
-                            <div>
-                                <span class='text-gray-600'>Остаток на конец дня:</span>
-                                <span class='font-semibold'>{$valueFormatted}</span>
+                                        return new \Illuminate\Support\HtmlString("
+                        <div class='flex flex-col gap-1'>
+                            <div class='flex items-center justify-between gap-2'>
+                                <div>
+                                    <span class='text-gray-600'>Остаток на конец дня:</span>
+                                    <span class='font-semibold'>{$todayValue}</span>
+                                </div>
+                                {$buttonHtml}
                             </div>
 
-                            {$buttonHtml}
+                            <div class='text-sm text-gray-500'>
+                                Остаток предыдущего дня:
+                                <span class='font-medium'>{$prevValue}</span>
+                            </div>
                         </div>
                     ");
                     })
@@ -204,6 +223,7 @@ class ExpensesTable
 
                 TextColumn::make('created_at')
                     ->dateTime()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable()
                     ->extraAttributes($tiny),
 
