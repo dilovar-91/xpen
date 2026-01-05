@@ -79,7 +79,6 @@ class Expense extends Model
                 $hasOperationsAfterManualForThatDay = Expense::query()
                     ->whereDate('date', $prevDailyBalance->date)
                     ->where('showroom_id', $record->showroom_id)
-                    ->where('online_cash', '<=', 0)
                     ->where(function ($q) use ($prevDailyBalance) {
                         $q->where('created_at', '>', $prevDailyBalance->updated_at)
                             ->orWhere('updated_at', '>', $prevDailyBalance->updated_at);

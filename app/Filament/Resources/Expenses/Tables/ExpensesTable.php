@@ -369,7 +369,6 @@ class ExpensesTable
             $hasOperationsAfterManual = Expense::query()
                 ->whereDate('date', $date)
                 ->where('showroom_id', $showroomId)
-                ->where('online_cash', '<=', 0)
                 ->where(function ($q) use ($dailyBalance) {
                     $q->where('created_at', '>', $dailyBalance->updated_at)
                       ->orWhere('updated_at', '>', $dailyBalance->updated_at);
@@ -389,7 +388,6 @@ class ExpensesTable
         $operations = Expense::query()
             ->whereDate('date', $date)
             ->where('showroom_id', $showroomId)
-            ->where('online_cash', '<=', 0)
             ->orderBy('created_at')
             ->get();
 
