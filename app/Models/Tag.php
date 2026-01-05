@@ -5,7 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Tag extends Model
 {
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'type_id'];
 
     public function expenses()
     {
