@@ -405,8 +405,13 @@ class ExpensesTable
             ->value('closing_balance') ?? 0;
 
         /** 6️⃣ Считаем closing_balance */
-        $totalIncome  = $operations->sum('income');
-        $totalExpense = $operations->sum('expense');
+        $totalIncome = $operations
+            ->where('income_type', '!=', 2)
+            ->sum('income');
+
+        $totalExpense = $operations
+            ->where('income_type', '!=', 2)
+            ->sum('expense');
 
         $closingBalance = $openingBalance + $totalIncome - $totalExpense;
 
