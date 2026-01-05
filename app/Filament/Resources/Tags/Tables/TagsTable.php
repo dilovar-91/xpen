@@ -25,6 +25,21 @@ class TagsTable
                     ->searchable()
                     ->sortable(),
 
+                    TextColumn::make('type_id')
+                    ->label('Тип')
+                    ->formatStateUsing(fn (int $state) => match ($state) {
+                        1 => 'Приход',
+                        2 => 'Расход',
+                        default => '—',
+                    })
+                    ->badge()
+                    ->color(fn (int $state) => match ($state) {
+                        1 => 'success',
+                        2 => 'danger',
+                        default => 'gray',
+                    })
+                    ->sortable(),
+
                 TextColumn::make('expenses_count')
                     ->label('Используется')
                     ->counts('expenses')
