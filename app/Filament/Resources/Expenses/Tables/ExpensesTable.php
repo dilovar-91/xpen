@@ -424,8 +424,13 @@ class ExpensesTable
                             // 7️⃣ Обновляем remaining_cash у каждой операции (опционально)
                             $currentBalance = $openingBalance;
                             foreach ($operations as $op) {
-                                $currentBalance += $op->income - $op->expense;
+                                if($op->income_type === 1) {
+                                    $currentBalance += $op->income - $op->expense;
+                                    
+                                } 
+
                                 $op->update(['remaining_cash' => $currentBalance]);
+                                
                             }
                         }
                     })
