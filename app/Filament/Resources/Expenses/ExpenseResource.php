@@ -20,6 +20,9 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
+use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Database\Eloquent\Builder;
+
 class ExpenseResource extends Resource
 {
     protected static ?string $model = Expense::class;
@@ -104,11 +107,17 @@ class ExpenseResource extends Resource
 
             Select::make('tag_id')
                 ->label('Тег')
-                ->relationship('tag', 'name')
+                ->relationship(
+                    name: 'tag',
+                    titleAttribute: 'name',
+                    modifyQueryUsing: fn (Builder $query, Get $get) =>
+                        $query->where('type_id', $get('type_id')),
+                )
                 ->searchable()
                 ->preload()
                 ->required()
-                ->placeholder('Выберите тег'),
+                ->placeholder('Выберите тег')
+                ->reactive(),
 
             // TagsInput::make('tags')->placeholder('Добавьте теги...')->suggestions(['Зарплата', 'Аванс', 'ГСМ', 'Бытовые расходы', 'Канцелярия', 'Полиграфия', 'Разное', 'Автовоз', 'Доставка',])->label('Теги'),
 

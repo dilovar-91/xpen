@@ -11,6 +11,8 @@ use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Grid;
 use Filament\Forms\Components\Checkbox;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Database\Eloquent\Builder;
 
 class ExpenseForm
 {
@@ -63,12 +65,18 @@ class ExpenseForm
                     ->reactive()
                     ->numeric(),
                 Select::make('tag_id')
-                    ->label('Тег')
-                    ->relationship('tag', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->required()
-                    ->placeholder('Выберите тег'),
+                ->label('Тег')
+                ->relationship(
+                    name: 'tag',
+                    titleAttribute: 'name',
+                    modifyQueryUsing: fn (Builder $query, Get $get) =>
+                        $query->where('type_id', $get('type_id')),
+                )
+                ->searchable()
+                ->preload()
+                ->required()
+                ->placeholder('Выберите тег')
+                ->reactive(),
 
                 Textarea::make('comment')
                     ->label('Комментарий')

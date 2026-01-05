@@ -15,6 +15,7 @@ class Expense extends Model
     protected $fillable = [
         'manager_id',
         'type_id',
+        'tag_id',
         'showroom_id',
         'date',
         'income',
