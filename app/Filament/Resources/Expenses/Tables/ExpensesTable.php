@@ -18,6 +18,7 @@ use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
 use NumberFormatter;
+use Illuminate\Support\Facades\Auth;
 
 class ExpensesTable
 {
@@ -340,101 +341,102 @@ class ExpensesTable
                     })
                     ->successNotificationTitle('Остаток обновлён'),
                 Action::make('accept')
-                    ->label(fn ($record) => $record->accepted == 1
-                        ? 'Принято'
-                        : 'Принять')
-                    ->icon('heroicon-o-check-circle')
-                    ->button()
-                    ->size('xs')
-                    ->color(fn ($record) => $record->accepted == 1
-                        ? 'success'
-                        : 'danger')
-                    ->visible(fn ($record) =>
-                        auth()->user()?->role === 'admin'
-                    )
-                    ->action(function ($record) {
-                        // 1️⃣ Обновляем accepted у операции
-                        $record->update(['accepted' => 1]);
+    ->label(fn ($record) => $record->accepted ? 'Принято' : 'Принять')
+    ->icon('heroicon-o-check-circle')
+    ->button()
+    ->size('xs')
+    ->color(fn ($record) => $record->accepted ? 'success' : 'danger')
+    ->visible(fn () => Auth::user()?->role === 'admin')
+    ->disabled(fn ($record) => $record->accepted)
+    ->requiresConfirmation()
+    ->action(function ($record) {
 
-                        // 2️⃣ Определяем дату и кассу (showroom)
-                        $date = $record->date;
-                        $showroomId = $record->showroom_id;
+        /** 1️⃣ Помечаем операцию как принятую */
+        $record->update(['accepted' => 1]);
 
-                        // 3️⃣ Берём все операции за день для этого шоурума
-                        $operations = Expense::whereDate('date', $date)
-                            ->where('showroom_id', $showroomId)
-                            ->where('online_cash', '<=', '0')
-                            ->get();
+        $date = $record->date;
+        $showroomId = $record->showroom_id;
 
-                        $dailyBalance = CashDailyBalance::query()
-                            ->whereDate('date', $date)
-                            ->where('showroom_id', $showroomId)
-                            ->first();
+        /** 2️⃣ Получаем дневной баланс */
+        $dailyBalance = CashDailyBalance::query()
+            ->whereDate('date', $date)
+            ->where('showroom_id', $showroomId)
+            ->first();
 
-                        if ($dailyBalance?->manually_changed) {
+        /** 3️⃣ Если баланс был изменён вручную — проверяем, были ли операции после этого */
+        if ($dailyBalance?->manually_changed) {
 
-                            // есть ли операции после updated_at баланса?
-                            $hasOperationsAfterManual = Expense::query()
-                                ->whereDate('date', $date)
-                                ->where('showroom_id', $showroomId)
-                                ->where('online_cash', '<=', 0)
-                                ->where(function ($q) use ($dailyBalance) {
-                                    $q->where('created_at', '>', $dailyBalance->updated_at)
-                                        ->orWhere('updated_at', '>', $dailyBalance->updated_at);
-                                })
-                                ->exists();
+            $hasOperationsAfterManual = Expense::query()
+                ->whereDate('date', $date)
+                ->where('showroom_id', $showroomId)
+                ->where('online_cash', '<=', 0)
+                ->where(function ($q) use ($dailyBalance) {
+                    $q->where('created_at', '>', $dailyBalance->updated_at)
+                      ->orWhere('updated_at', '>', $dailyBalance->updated_at);
+                })
+                ->exists();
 
-                            // ✅ Если после ручного изменения операций не было — ничего не пересчитываем
-                            if (! $hasOperationsAfterManual) {
-                                return;
-                            }
+            // ⛔ Ничего не делаем — ручной баланс актуален
+            if (! $hasOperationsAfterManual) {
+                return;
+            }
 
-                            // ✅ Если операции были — снимаем ручной режим, чтобы пересчитать
-                            $dailyBalance->update([
-                                'manually_changed' => 0,
-                            ]);
-                        }
+            // ❗ Снимаем ручной режим
+            $dailyBalance->update(['manually_changed' => 0]);
+        }
 
-                        if ($operations->isNotEmpty()) {
-                            // 4️⃣ Считаем opening_balance по предыдущему дню
-                            $openingBalance = CashDailyBalance::where('showroom_id', $showroomId)
-                                ->whereDate('date', '<', $date)
-                                ->orderBy('date', 'desc')
-                                ->value('closing_balance') ?? 0;
+        /** 4️⃣ Все операции дня (включая только что принятую) */
+        $operations = Expense::query()
+            ->whereDate('date', $date)
+            ->where('showroom_id', $showroomId)
+            ->where('online_cash', '<=', 0)
+            ->orderBy('created_at')
+            ->get();
 
-                            // 5️⃣ Считаем closing_balance = opening + SUM(income) - SUM(expense)
-                            $totalIncome = $operations->sum('income');
-                            $totalExpense = $operations->sum('expense');
+        if ($operations->isEmpty()) {
+            return;
+        }
 
-                            $closingBalance = $openingBalance + $totalIncome - $totalExpense;
+        /** 5️⃣ Opening balance = closing предыдущего дня */
+        $openingBalance = CashDailyBalance::query()
+            ->where('showroom_id', $showroomId)
+            ->whereDate('date', '<', $date)
+            ->orderBy('date', 'desc')
+            ->value('closing_balance') ?? 0;
 
-                            // 6️⃣ Сохраняем или обновляем запись в cash_daily_balances
-                            CashDailyBalance::updateOrCreate(
-                                [
-                                    'date' => $date,
-                                    'showroom_id' => $showroomId
-                                ],
-                                [
-                                    'opening_balance' => $openingBalance,
-                                    'closing_balance' => $closingBalance,
-                                    'approved' => true
-                                ]
-                            );
+        /** 6️⃣ Считаем closing_balance */
+        $totalIncome  = $operations->sum('income');
+        $totalExpense = $operations->sum('expense');
 
-                            // 7️⃣ Обновляем remaining_cash у каждой операции (опционально)
-                            $currentBalance = $openingBalance;
-                            foreach ($operations as $op) {
-                                if($op->income_type !== 2) {
-                                    $currentBalance += $op->income - $op->expense;                                    
-                                } 
+        $closingBalance = $openingBalance + $totalIncome - $totalExpense;
 
-                                $op->update(['remaining_cash' => $currentBalance]);
-                                
-                            }
-                        }
-                    })
-                    ->disabled(fn ($record) => $record->accepted === 1)
-                    ->requiresConfirmation(),
+        /** 7️⃣ Обновляем дневной баланс */
+        CashDailyBalance::updateOrCreate(
+            [
+                'date' => $date,
+                'showroom_id' => $showroomId,
+            ],
+            [
+                'opening_balance' => $openingBalance,
+                'closing_balance' => $closingBalance,
+                'approved' => true,
+                'manually_changed' => 0,
+            ]
+        );
+
+        /** 8️⃣ Пересчитываем remaining_cash */
+        $currentBalance = $openingBalance;
+
+        foreach ($operations as $op) {
+            if ($op->income_type !== 2) {
+                $currentBalance += $op->income - $op->expense;
+            }
+
+            $op->update([
+                'remaining_cash' => $currentBalance,
+            ]);
+        }
+    }),
 
                 EditAction::make('edit')
                     ->label('Изменить')
