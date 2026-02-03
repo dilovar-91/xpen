@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Expenses\Tables;
 use App\Filament\Resources\Expenses\ExpenseResource;
 use App\Models\CashDailyBalance;
 use App\Models\Expense;
+use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -16,6 +17,7 @@ use Filament\Tables\Columns\TagsColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use NumberFormatter;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +25,6 @@ use Illuminate\Support\Facades\Auth;
 class ExpensesTable
 {
     public int $showroomId;
-
 
 
     public function mount()
@@ -43,9 +44,11 @@ class ExpensesTable
             ->groups([
                 Group::make('date')
                     ->label('Дата')
-                    ->getTitleFromRecordUsing(fn ($record) =>
-                    $record->date->format('d.m.Y')
+
+
+                    ->getTitleFromRecordUsing(fn($record) => $record->date->format('d.m.Y')
                     )
+
                     ->getDescriptionFromRecordUsing(function ($record) {
 
                         // 🔹 Текущий день
@@ -58,7 +61,7 @@ class ExpensesTable
                             : 'Не найден';
 
                         $todayValueNumber = $balanceToday
-                            ? (float) $balanceToday->closing_balance
+                            ? (float)$balanceToday->closing_balance
                             : null;
 
                         // 🔹 Предыдущий день
@@ -71,45 +74,69 @@ class ExpensesTable
                             ? number_format($balancePrev->closing_balance, 0, '', ' ') . ' ₽'
                             : 'Не найден';
 
-                        // 🔹 Для кнопки
+                        // 🔹 Для кнопок
                         $date = $record->date->toDateString();
-                        $showroomId = (int) $record->showroom_id;
+                        $showroomId = (int)$record->showroom_id;
                         $valueForJs = $todayValueNumber !== null ? $todayValueNumber : 'null';
 
                         $isAdmin = auth()->user()?->role === 'admin';
 
-                        $buttonHtml = $isAdmin
+                        $editButtonHtml = $isAdmin
                             ? "
-                            <button
-                                type='button'
-                                class='fi-link fi-size-sm fi-color-primary'
-                                wire:click=\"mountTableAction(
-                                    'editClosingBalance',
-                                    null,
-                                    { date: '{$date}', showroom_id: {$showroomId}, closing_balance: {$valueForJs} }
-                                )\"
-                            >
-                                Изменить
-                            </button>
-                        "
-                                            : '';
+            <button
+                type='button'
+                class='fi-color fi-color-danger fi-bg-color-600 hover:fi-bg-color-500 dark:fi-bg-color-600 dark:hover:fi-bg-color-500 fi-text-color-0 hover:fi-text-color-0 dark:fi-text-color-0 dark:hover:fi-text-color-0 fi-btn fi-size-xs  fi-ac-btn-action'
+                wire:click=\"mountTableAction(
+                    'editClosingBalance',
+                    null,
+                    { date: '{$date}', showroom_id: {$showroomId}, closing_balance: {$valueForJs} }
+                )\"
+            >
+                Изменить
+            </button>
+        "
+                            : '';
 
-                                        return new \Illuminate\Support\HtmlString("
-                        <div class='flex flex-col gap-1'>
-                            <div class='flex items-center justify-between gap-2'>
-                                <div>
-                                    <span class='text-gray-600'>Остаток на конец дня:</span>
-                                    <span class='font-semibold'>{$todayValue}</span>
-                                </div>
-                                {$buttonHtml}
-                            </div>
+                       $formattedData =  Carbon::parse($date)->format('d.m.Y');
 
-                            <div class='text-sm text-gray-500'>
-                                Остаток предыдущего дня:
-                                <span class='font-medium'>{$prevValue}</span>
-                            </div>
-                        </div>
-                    ");
+                        // ✅ Новая кнопка: Принять за дату
+                        $acceptDateHtml = $isAdmin
+                            ? "
+            <button
+                type='button'
+                class='ml-10 fi-color fi-color-success fi-bg-color-400 hover:fi-bg-color-300 dark:fi-bg-color-600 dark:hover:fi-bg-color-500 fi-text-color-900 hover:fi-text-color-800 dark:fi-text-color-950 dark:hover:fi-text-color-950 fi-btn fi-size-xs  fi-ac-btn-action'
+                wire:click=\"mountTableAction(
+                    'acceptDay',
+                    null,
+                    { date: '{$date}', showroom_id: {$showroomId} }
+                )\"
+            >
+                Принять за дату {$formattedData}
+            </button>
+        "
+                            : '';
+
+                        return new \Illuminate\Support\HtmlString("
+        <div class='flex flex-col gap-1'>
+            <div class='flex items-center justify-between gap-2'>
+                <div>
+                    <span class='text-gray-600'>Остаток на конец дня:</span>
+                    <span class='font-semibold'>{$todayValue}</span>
+                </div>
+
+                <div class='flex items-center gap-2'>
+                    {$editButtonHtml}
+                     {$acceptDateHtml}
+                </div>
+            </div>
+
+            <div class='text-sm text-gray-500'>
+                Остаток предыдущего дня:
+                <span class='font-medium'>{$prevValue}</span>
+            </div>
+        </div>
+    ");
+
                     })
             ])
             ->header(function ($livewire) {
@@ -117,7 +144,6 @@ class ExpensesTable
                     'livewire' => $livewire,
                 ]);
             })
-
             ->defaultPaginationPageOption(100)
             ->paginationPageOptions([25, 50, 100, 200])
             ->columns([
@@ -130,20 +156,18 @@ class ExpensesTable
                 TextColumn::make('type_id')
                     ->label('Тип')
                     ->badge()
-                    ->formatStateUsing(fn (string|int|null $state): string => match ($state) {
+                    ->formatStateUsing(fn(string|int|null $state): string => match ($state) {
                         1 => 'Приход',
                         2 => 'Расход',
                         default => '—',
                     })
-                    ->color(fn (string|int|null $state): string => match ($state) {
+                    ->color(fn(string|int|null $state): string => match ($state) {
                         1 => 'success',
                         2 => 'danger',
                         default => 'gray',
                     })
                     ->sortable()
                     ->extraAttributes($tiny),
-
-
 
 
                 TextColumn::make('showroom.name')
@@ -161,7 +185,7 @@ class ExpensesTable
                         $fmt = new NumberFormatter('ru_RU', NumberFormatter::CURRENCY);
                         $fmt->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
 
-                        return $fmt->formatCurrency((float) $state, 'RUB');
+                        return $fmt->formatCurrency((float)$state, 'RUB');
                     })
                     ->sortable()
                     ->extraAttributes($tiny),
@@ -169,12 +193,12 @@ class ExpensesTable
                 TextColumn::make('income_type')
                     ->label('Способ оплаты')
                     ->badge()
-                    ->formatStateUsing(fn (string|int|null $state): string => match ($state) {
+                    ->formatStateUsing(fn(string|int|null $state): string => match ($state) {
                         1 => 'Наличка',
                         2 => 'Безнал',
                         default => '—',
                     })
-                    ->color(fn (string|int|null $state): string => match ($state) {
+                    ->color(fn(string|int|null $state): string => match ($state) {
                         1 => 'warning',
                         2 => 'success',
                         default => 'gray',
@@ -191,7 +215,7 @@ class ExpensesTable
                         $fmt = new NumberFormatter('ru_RU', NumberFormatter::CURRENCY);
                         $fmt->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
 
-                        return $fmt->formatCurrency((float) $state, 'RUB');
+                        return $fmt->formatCurrency((float)$state, 'RUB');
                     })
                     ->sortable()
                     ->extraAttributes($tiny),
@@ -218,7 +242,7 @@ class ExpensesTable
                         $fmt = new NumberFormatter('ru_RU', NumberFormatter::CURRENCY);
                         $fmt->setAttribute(NumberFormatter::FRACTION_DIGITS, 0);
 
-                        return $fmt->formatCurrency((float) $state, 'RUB');
+                        return $fmt->formatCurrency((float)$state, 'RUB');
                     })
                     ->sortable()
                     ->extraAttributes($tiny),
@@ -236,7 +260,6 @@ class ExpensesTable
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->extraAttributes($tiny),
             ])
-
             ->modifyQueryUsing(function ($query, $livewire) {
                 if ($livewire->dateFrom) {
                     $query->whereDate('date', '>=', $livewire->dateFrom);
@@ -245,9 +268,6 @@ class ExpensesTable
                     $query->whereDate('date', '<=', $livewire->dateTo);
                 }
             })
-
-
-
             ->headerActions([
                 Action::make('addIncome')
                     ->label('Добавить приход')
@@ -263,7 +283,7 @@ class ExpensesTable
                             ExpenseResource::getExpenseForm(1, $showroomId)
                         );
                     })
-                    ->action(fn (array $data) => Expense::create($data)),
+                    ->action(fn(array $data) => Expense::create($data)),
 
                 Action::make('addExpense')
                     ->label('Добавить расход')
@@ -277,9 +297,9 @@ class ExpensesTable
                             ExpenseResource::getExpenseForm(2, $showroomId)
                         );
                     })
-                    ->action(fn (array $data) => Expense::create($data)),
+                    ->action(fn(array $data) => Expense::create($data)),
             ])
-            ->recordClasses(fn ($record) => $record->type_id == 1
+            ->recordClasses(fn($record) => $record->type_id == 1
                 ? 'bg-success-100 dark:bg-success-900/40'
                 : 'bg-danger-100 dark:bg-danger-900/40')
             ->filters([])
@@ -288,12 +308,11 @@ class ExpensesTable
                 Action::make('editClosingBalance')
                     ->label('Изменить остаток')
                     ->hiddenLabel()
-
                     ->modalHeading(function (Action $action) {
                         $args = $action->getArguments();
 
                         return 'Изменить остаток на конец дня: ' .
-                            \Carbon\Carbon::parse($args['date'])->format('d.m.Y');
+                            Carbon::parse($args['date'])->format('d.m.Y');
                     })
                     ->modalSubmitActionLabel('Сохранить')
                     ->fillForm(function (array $arguments) {
@@ -316,7 +335,7 @@ class ExpensesTable
 
                                 // ✅ 1) если передали значение из группы — используем его
                                 if (array_key_exists('closing_balance', $args) && $args['closing_balance'] !== null) {
-                                    return (float) $args['closing_balance'];
+                                    return (float)$args['closing_balance'];
                                 }
 
                                 // ✅ 2) иначе — берём из БД
@@ -334,112 +353,211 @@ class ExpensesTable
                                 'showroom_id' => $args['showroom_id'],
                             ],
                             [
-                                'closing_balance' => (float) $data['closing_balance'],
-                                'manually_changed'  => 1,
+                                'closing_balance' => (float)$data['closing_balance'],
+                                'manually_changed' => 1,
                             ]
                         );
                     })
                     ->successNotificationTitle('Остаток обновлён'),
+
+                Action::make('acceptDay')
+                    ->hiddenLabel()
+                    ->label('Принять день')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(fn () => auth()->user()?->role === 'admin')
+                    ->action(function (array $arguments) {
+
+                        $date = $arguments['date'] ?? null;
+                        $showroomId = (int)($arguments['showroom_id'] ?? 0);
+
+                        if (! $date || ! $showroomId) {
+                            return;
+                        }
+
+                        DB::transaction(function () use ($date, $showroomId) {
+
+                            /** 1) Принимаем все операции дня (которые ещё не приняты) */
+                            Expense::query()
+                                ->whereDate('date', $date)
+                                ->where('showroom_id', $showroomId)
+                                ->where('accepted', 0)
+                                ->update(['accepted' => 1]);
+
+                            /** 2) Получаем дневной баланс */
+                            $dailyBalance = CashDailyBalance::query()
+                                ->whereDate('date', $date)
+                                ->where('showroom_id', $showroomId)
+                                ->first();
+
+                            /** 3) Если баланс был изменён вручную — проверяем операции после этого */
+                            if ($dailyBalance?->manually_changed) {
+
+                                $hasOperationsAfterManual = Expense::query()
+                                    ->whereDate('date', $date)
+                                    ->where('showroom_id', $showroomId)
+                                    ->where(function ($q) use ($dailyBalance) {
+                                        $q->where('created_at', '>', $dailyBalance->updated_at)
+                                            ->orWhere('updated_at', '>', $dailyBalance->updated_at);
+                                    })
+                                    ->exists();
+
+                                if (! $hasOperationsAfterManual) {
+                                    return; // ручной баланс актуален
+                                }
+
+                                $dailyBalance->update(['manually_changed' => 0]);
+                            }
+
+                            /** 4) Все операции дня */
+                            $operations = Expense::query()
+                                ->whereDate('date', $date)
+                                ->where('showroom_id', $showroomId)
+                                ->orderBy('created_at')
+                                ->get();
+
+                            if ($operations->isEmpty()) {
+                                return;
+                            }
+
+                            /** 5) Opening balance = closing предыдущего дня */
+                            $openingBalance = CashDailyBalance::query()
+                                ->where('showroom_id', $showroomId)
+                                ->whereDate('date', '<', $date)
+                                ->orderBy('date', 'desc')
+                                ->value('closing_balance') ?? 0;
+
+                            /** 6) Считаем closing_balance */
+                            $totalIncome = $operations->where('income_type', '!=', 2)->sum('income');
+                            $totalExpense = $operations->where('income_type', '!=', 2)->sum('expense');
+
+                            $closingBalance = $openingBalance + $totalIncome - $totalExpense;
+
+                            /** 7) Обновляем дневной баланс */
+                            CashDailyBalance::updateOrCreate(
+                                ['date' => $date, 'showroom_id' => $showroomId],
+                                [
+                                    'opening_balance' => $openingBalance,
+                                    'closing_balance' => $closingBalance,
+                                    'approved' => true,
+                                    'manually_changed' => 0,
+                                ]
+                            );
+
+                            /** 8) Пересчитываем remaining_cash */
+                            $currentBalance = $openingBalance;
+
+                            foreach ($operations as $op) {
+                                if ($op->income_type !== 2) {
+                                    $currentBalance += $op->income - $op->expense;
+                                }
+
+                                $op->update(['remaining_cash' => $currentBalance]);
+                            }
+                        });
+                    }),
                 Action::make('accept')
-    ->label(fn ($record) => $record->accepted ? 'Принято' : 'Принять')
-    ->icon('heroicon-o-check-circle')
-    ->button()
-    ->size('xs')
-    ->color(fn ($record) => $record->accepted ? 'success' : 'danger')
-    ->visible(fn () => Auth::user()?->role === 'admin')
-    ->disabled(fn ($record) => $record->accepted)
-    ->requiresConfirmation()
-    ->action(function ($record) {
 
-        /** 1️⃣ Помечаем операцию как принятую */
-        $record->update(['accepted' => 1]);
+                    ->label(fn($record) => $record->accepted ? 'Принято' : 'Принять')
+                    ->icon('heroicon-o-check-circle')
+                    ->button()
+                    ->size('xs')
+                    ->color(fn($record) => $record->accepted ? 'success' : 'danger')
+                    ->visible(false)
+                    //->visible(fn() => Auth::user()?->role === 'admin')
+                    ->disabled(fn($record) => $record->accepted)
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
 
-        $date = $record->date;
-        $showroomId = $record->showroom_id;
+                        /** 1️⃣ Помечаем операцию как принятую */
+                        $record->update(['accepted' => 1]);
 
-        /** 2️⃣ Получаем дневной баланс */
-        $dailyBalance = CashDailyBalance::query()
-            ->whereDate('date', $date)
-            ->where('showroom_id', $showroomId)
-            ->first();
+                        $date = $record->date;
+                        $showroomId = $record->showroom_id;
 
-        /** 3️⃣ Если баланс был изменён вручную — проверяем, были ли операции после этого */
-        if ($dailyBalance?->manually_changed) {
+                        /** 2️⃣ Получаем дневной баланс */
+                        $dailyBalance = CashDailyBalance::query()
+                            ->whereDate('date', $date)
+                            ->where('showroom_id', $showroomId)
+                            ->first();
 
-            $hasOperationsAfterManual = Expense::query()
-                ->whereDate('date', $date)
-                ->where('showroom_id', $showroomId)
-                ->where(function ($q) use ($dailyBalance) {
-                    $q->where('created_at', '>', $dailyBalance->updated_at)
-                      ->orWhere('updated_at', '>', $dailyBalance->updated_at);
-                })
-                ->exists();
+                        /** 3️⃣ Если баланс был изменён вручную — проверяем, были ли операции после этого */
+                        if ($dailyBalance?->manually_changed) {
 
-            // ⛔ Ничего не делаем — ручной баланс актуален
-            if (! $hasOperationsAfterManual) {
-                return;
-            }
+                            $hasOperationsAfterManual = Expense::query()
+                                ->whereDate('date', $date)
+                                ->where('showroom_id', $showroomId)
+                                ->where(function ($q) use ($dailyBalance) {
+                                    $q->where('created_at', '>', $dailyBalance->updated_at)
+                                        ->orWhere('updated_at', '>', $dailyBalance->updated_at);
+                                })
+                                ->exists();
 
-            // ❗ Снимаем ручной режим
-            $dailyBalance->update(['manually_changed' => 0]);
-        }
+                            // ⛔ Ничего не делаем — ручной баланс актуален
+                            if (!$hasOperationsAfterManual) {
+                                return;
+                            }
 
-        /** 4️⃣ Все операции дня (включая только что принятую) */
-        $operations = Expense::query()
-            ->whereDate('date', $date)
-            ->where('showroom_id', $showroomId)
-            ->orderBy('created_at')
-            ->get();
+                            // ❗ Снимаем ручной режим
+                            $dailyBalance->update(['manually_changed' => 0]);
+                        }
 
-        if ($operations->isEmpty()) {
-            return;
-        }
+                        /** 4️⃣ Все операции дня (включая только что принятую) */
+                        $operations = Expense::query()
+                            ->whereDate('date', $date)
+                            ->where('showroom_id', $showroomId)
+                            ->orderBy('created_at')
+                            ->get();
 
-        /** 5️⃣ Opening balance = closing предыдущего дня */
-        $openingBalance = CashDailyBalance::query()
-            ->where('showroom_id', $showroomId)
-            ->whereDate('date', '<', $date)
-            ->orderBy('date', 'desc')
-            ->value('closing_balance') ?? 0;
+                        if ($operations->isEmpty()) {
+                            return;
+                        }
 
-        /** 6️⃣ Считаем closing_balance */
-        $totalIncome = $operations
-            ->where('income_type', '!=', 2)
-            ->sum('income');
+                        /** 5️⃣ Opening balance = closing предыдущего дня */
+                        $openingBalance = CashDailyBalance::query()
+                            ->where('showroom_id', $showroomId)
+                            ->whereDate('date', '<', $date)
+                            ->orderBy('date', 'desc')
+                            ->value('closing_balance') ?? 0;
 
-        $totalExpense = $operations
-            ->where('income_type', '!=', 2)
-            ->sum('expense');
+                        /** 6️⃣ Считаем closing_balance */
+                        $totalIncome = $operations
+                            ->where('income_type', '!=', 2)
+                            ->sum('income');
 
-        $closingBalance = $openingBalance + $totalIncome - $totalExpense;
+                        $totalExpense = $operations
+                            ->where('income_type', '!=', 2)
+                            ->sum('expense');
 
-        /** 7️⃣ Обновляем дневной баланс */
-        CashDailyBalance::updateOrCreate(
-            [
-                'date' => $date,
-                'showroom_id' => $showroomId,
-            ],
-            [
-                'opening_balance' => $openingBalance,
-                'closing_balance' => $closingBalance,
-                'approved' => true,
-                'manually_changed' => 0,
-            ]
-        );
+                        $closingBalance = $openingBalance + $totalIncome - $totalExpense;
 
-        /** 8️⃣ Пересчитываем remaining_cash */
-        $currentBalance = $openingBalance;
+                        /** 7️⃣ Обновляем дневной баланс */
+                        CashDailyBalance::updateOrCreate(
+                            [
+                                'date' => $date,
+                                'showroom_id' => $showroomId,
+                            ],
+                            [
+                                'opening_balance' => $openingBalance,
+                                'closing_balance' => $closingBalance,
+                                'approved' => true,
+                                'manually_changed' => 0,
+                            ]
+                        );
 
-        foreach ($operations as $op) {
-            if ($op->income_type !== 2) {
-                $currentBalance += $op->income - $op->expense;
-            }
+                        /** 8️⃣ Пересчитываем remaining_cash */
+                        $currentBalance = $openingBalance;
 
-            $op->update([
-                'remaining_cash' => $currentBalance,
-            ]);
-        }
-    }),
+                        foreach ($operations as $op) {
+                            if ($op->income_type !== 2) {
+                                $currentBalance += $op->income - $op->expense;
+                            }
+
+                            $op->update([
+                                'remaining_cash' => $currentBalance,
+                            ]);
+                        }
+                    }),
 
                 EditAction::make('edit')
                     ->label('Изменить')
@@ -447,14 +565,14 @@ class ExpensesTable
                     ->button()
                     ->size('xs')
                     ->color('success')
-                    ->visible(fn () => auth()->user()?->role === 'admin')
+                    ->visible(fn() => auth()->user()?->role === 'admin')
                     ->slideOver()
                     ->modalHeading('Редактирование'),
                 DeleteAction::make('delete')
                     ->label('Удалить')
                     ->icon('heroicon-o-trash')
                     ->button()
-                    ->visible(fn () => auth()->user()?->role === 'admin')
+                    ->visible(fn() => auth()->user()?->role === 'admin')
                     ->size('xs')
                     ->color('danger')
 
@@ -462,7 +580,7 @@ class ExpensesTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()->button()->size('xs')->visible(fn () => auth()->user()?->role === 'admin'),
+                    DeleteBulkAction::make()->button()->size('xs')->visible(fn() => auth()->user()?->role === 'admin'),
                 ]),
             ])
             ->recordAction('edit')   // откроет EditAction при клике по строке
@@ -470,7 +588,6 @@ class ExpensesTable
             ->columnManager(false)
             ->striped()->defaultPaginationPageOption(25);
     }
-
 
 
 }

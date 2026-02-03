@@ -50,8 +50,15 @@
 .fi-ta-group-header-cell {
     background-color: skyblue; /* slate-50 */
     color: white !important;
+    width: 100% !important;
 }
 .dark .fi-ta-group-header-cell {
     background-color: skyblue; /* slate-800 */
     color: white !important;
+}
+
+
+.fi-ta-group-header {
+    width: 100% !important;
+    display: flex !important;
 }
