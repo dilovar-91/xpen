@@ -79,7 +79,7 @@ class ExpensesTable
                         $showroomId = (int)$record->showroom_id;
                         $valueForJs = $todayValueNumber !== null ? $todayValueNumber : 'null';
 
-                        $isAdmin = auth()->user()?->role === 'admin';
+                        $isAdmin = auth()->user()?->role === 'admin' ?? true;
 
                         $editButtonHtml = $isAdmin
                             ? "
@@ -565,7 +565,7 @@ class ExpensesTable
                     ->button()
                     ->size('xs')
                     ->color('success')
-                    ->visible(fn() => auth()->user()?->role === 'admin')
+                    //->visible(fn() => auth()->user()?->role === 'admin')
                     ->slideOver()
                     ->modalHeading('Редактирование'),
                 DeleteAction::make('delete')
