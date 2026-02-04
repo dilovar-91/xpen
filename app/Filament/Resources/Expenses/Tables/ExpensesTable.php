@@ -228,10 +228,13 @@ class ExpensesTable
 
 
                 TextColumn::make('comment')
-                    ->numeric(2)
                     ->label('Комментарий по расходу')
                     ->sortable()
-                    ->extraAttributes($tiny),
+                    ->wrap()
+                    ->extraAttributes([
+                        ...$tiny,
+                        'class' => 'max-w-[350px] whitespace-normal break-words',
+                    ]),
 
                 TextColumn::make('remaining_cash')
                     ->numeric(2)
