@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -67,8 +68,8 @@ class Expense extends Model
         });
 
         static::created(function (Expense $record) {
-            // ✅ после добавления строки пересчитываем остаток дня
-            self::recalculateDay($record->date, $record->showroom_id);
+            // ✅ после добавления строки пересчитываем день и все последующие дни
+            self::recalculateFromDate($record->date, (int) $record->showroom_id);
         });
 
         static::updating(function (Expense $record) {
@@ -78,14 +79,14 @@ class Expense extends Model
         });
 
         static::updated(function (Expense $record) {
-            // если менялись деньги/тип — пересчитать день
+            // если менялись деньги/тип/дата/шоурум — пересчитать день и все последующие
             if ($record->wasChanged(['income', 'expense', 'type_id', 'income_type', 'showroom_id', 'date'])) {
-                self::recalculateDay($record->date, $record->showroom_id);
+                self::recalculateFromDate($record->date, (int) $record->showroom_id);
             }
         });
 
         static::deleted(function (Expense $record) {
-            self::recalculateDay($record->date, $record->showroom_id);
+            self::recalculateFromDate($record->date, (int) $record->showroom_id);
         });
     }
 
@@ -94,73 +95,149 @@ class Expense extends Model
     {
         DB::transaction(function () {
             $this->update(['accepted' => 1]);
-            self::recalculateDay($this->date, $this->showroom_id);
+            self::recalculateFromDate($this->date, (int) $this->showroom_id);
+        });
+    }
+
+    /**
+     * Пересчитывает startDate и все последующие даты, где есть операции, в рамках showroom.
+     * Уважает manually_changed: если день вручную фиксирован и после правки не было операций — не пересчитывает его,
+     * но его closing_balance используется как база для следующих дней.
+     */
+    public static function recalculateFromDate($startDate, int $showroomId): void
+    {
+        DB::transaction(function () use ($startDate, $showroomId) {
+
+            $start = Carbon::parse($startDate)->startOfDay()->toDateString();
+
+            // max дата, которую нужно затронуть: либо по операциям, либо по дневным балансам
+            $maxExpenseDate = self::query()
+                ->where('showroom_id', $showroomId)
+                ->whereDate('date', '>=', $start)
+                ->max(DB::raw('DATE(date)'));
+
+            $maxBalanceDate = CashDailyBalance::query()
+                ->where('showroom_id', $showroomId)
+                ->whereDate('date', '>=', $start)
+                ->max('date');
+
+            $max = max($maxExpenseDate ?: $start, $maxBalanceDate ?: $start);
+
+            $current = Carbon::parse($start);
+            $end = Carbon::parse($max);
+
+            // opening на start = closing предыдущего дня
+            $openingBalance = (float) (CashDailyBalance::query()
+                ->where('showroom_id', $showroomId)
+                ->whereDate('date', '<', $start)
+                ->orderBy('date', 'desc')
+                ->value('closing_balance') ?? 0);
+
+            while ($current->lte($end)) {
+                $date = $current->toDateString();
+
+                // пересчитываем/фиксируем день и получаем closing как opening для следующего
+                [$closing, $openingForNext] = self::recalculateSingleDayWithOpening($date, $showroomId, $openingBalance);
+                $openingBalance = $openingForNext;
+
+                $current->addDay();
+            }
         });
     }
 
     // === Основной пересчёт дня (CashDailyBalance + remaining_cash) ===
+    // Можно оставить для совместимости — он пересчитает только один день (без последующих)
     public static function recalculateDay($date, int $showroomId): void
     {
-        DB::transaction(function () use ($date, $showroomId) {
+        $opening = (float) (CashDailyBalance::query()
+            ->where('showroom_id', $showroomId)
+            ->whereDate('date', '<', $date)
+            ->orderBy('date', 'desc')
+            ->value('closing_balance') ?? 0);
 
-            $dailyBalance = CashDailyBalance::query()
-                ->whereDate('date', $date)
-                ->where('showroom_id', $showroomId)
-                ->first();
+        self::recalculateSingleDayWithOpening($date, $showroomId, $opening);
+    }
 
-            // Если баланс был изменён вручную и после этого операций не было — не трогаем
-            if ($dailyBalance?->manually_changed) {
-                if (! self::hasOperationsAfter($date, $showroomId, $dailyBalance->updated_at)) {
-                    return;
-                }
-                // иначе снимаем ручной режим и пересчитываем
-                $dailyBalance->update(['manually_changed' => 0]);
+    /**
+     * @return array{0: float, 1: float} [closingBalance, openingForNext]
+     */
+    private static function recalculateSingleDayWithOpening($date, int $showroomId, float $openingBalance): array
+    {
+        $dailyBalance = CashDailyBalance::query()
+            ->whereDate('date', $date)
+            ->where('showroom_id', $showroomId)
+            ->first();
+
+        // День вручную фиксирован и после правки не было операций — НЕ пересчитываем.
+        // Но его closing задаёт базу для следующих дней.
+        if ($dailyBalance?->manually_changed) {
+            if (! self::hasOperationsAfter($date, $showroomId, $dailyBalance->updated_at)) {
+                $closing = (float) $dailyBalance->closing_balance;
+                return [$closing, $closing];
             }
 
-            $operations = self::query()
-                ->whereDate('date', $date)
-                ->where('showroom_id', $showroomId)
-                ->orderBy('created_at')
-                ->orderBy('id')
-                ->get();
+            // Были изменения после ручной правки — снимаем ручной режим и пересчитываем
+            $dailyBalance->update(['manually_changed' => 0]);
+        }
 
-            if ($operations->isEmpty()) {
-                return;
-            }
+        $operations = self::query()
+            ->whereDate('date', $date)
+            ->where('showroom_id', $showroomId)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
 
-            $openingBalance = CashDailyBalance::query()
-                ->where('showroom_id', $showroomId)
-                ->whereDate('date', '<', $date)
-                ->orderBy('date', 'desc')
-                ->value('closing_balance') ?? 0;
-
-            $totalIncome  = $operations->where('income_type', '!=', 2)->sum('income');
-            $totalExpense = $operations->where('income_type', '!=', 2)->sum('expense');
-
-            $closingBalance = $openingBalance + $totalIncome - $totalExpense;
+        // Нет операций — closing = opening (и фиксируем баланс)
+        if ($operations->isEmpty()) {
+            $closing = $openingBalance;
 
             CashDailyBalance::updateOrCreate(
                 ['date' => $date, 'showroom_id' => $showroomId],
                 [
                     'opening_balance' => $openingBalance,
-                    'closing_balance' => $closingBalance,
+                    'closing_balance' => $closing,
                     'approved' => true,
                     'manually_changed' => 0,
                 ]
             );
 
-            // remaining_cash по операциям дня
-            $currentBalance = $openingBalance;
+            return [$closing, $closing];
+        }
 
-            foreach ($operations as $op) {
-                if ((int) $op->income_type !== 2) {
-                    $currentBalance += ($op->income ?? 0) - ($op->expense ?? 0);
-                }
+        $totalIncome = $operations->where('income_type', '!=', 2)->sum('income');
+        $totalExpense = $operations->where('income_type', '!=', 2)->sum('expense');
 
-                // updateQuietly чтобы лишний раз не дергать события
-                $op->updateQuietly(['remaining_cash' => $currentBalance]);
+        $closingBalance = $openingBalance + $totalIncome - $totalExpense;
+
+        CashDailyBalance::updateOrCreate(
+            ['date' => $date, 'showroom_id' => $showroomId],
+            [
+                'opening_balance' => $openingBalance,
+                'closing_balance' => $closingBalance,
+                'approved' => true,
+                'manually_changed' => 0,
+            ]
+        );
+
+        // remaining_cash по операциям дня
+        $currentBalance = $openingBalance;
+
+        foreach ($operations as $op) {
+            if ((int) $op->income_type !== 2) {
+                $currentBalance += (float) (($op->income ?? 0) - ($op->expense ?? 0));
             }
-        });
+
+            // Чтобы не запускать updated-хуки и не зациклиться
+            if (method_exists($op, 'updateQuietly')) {
+                $op->updateQuietly(['remaining_cash' => $currentBalance]);
+            } else {
+                self::withoutEvents(function () use ($op, $currentBalance) {
+                    $op->update(['remaining_cash' => $currentBalance]);
+                });
+            }
+        }
+
+        return [$closingBalance, $closingBalance];
     }
 
     // === База для remaining_cash при создании записи ===
@@ -187,7 +264,7 @@ class Expense extends Model
             ->first();
 
         if ($prevDailyBalance?->manually_changed) {
-            if (! self::hasOperationsAfter($prevDailyBalance->date, $record->showroom_id, $prevDailyBalance->updated_at)) {
+            if (! self::hasOperationsAfter($prevDailyBalance->date, (int) $record->showroom_id, $prevDailyBalance->updated_at)) {
                 return (float) $prevDailyBalance->closing_balance;
             }
         }
