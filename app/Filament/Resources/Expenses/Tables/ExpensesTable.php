@@ -64,22 +64,23 @@ class ExpensesTable
                             ? (float)$balanceToday->closing_balance
                             : null;
 
-                        // 🔹 Предыдущий день
-                        $balancePrev = CashDailyBalance::whereDate('date', '<', $record->date)
+                        $balancePrev = CashDailyBalance::query()
                             ->where('showroom_id', $record->showroom_id)
+                            ->whereDate('date', '<', $record->date)
                             ->orderByDesc('date')
                             ->first();
 
                         $prevValue = $balancePrev
-                            ? number_format($balancePrev->closing_balance, 0, '', ' ') . ' ₽'
-                            : 'Не найден';
+                            ? number_format((float) $balancePrev->closing_balance, 0, '', ' ') . ' ₽'
+                            : '0 ₽';
 
                         // 🔹 Для кнопок
                         $date = $record->date->toDateString();
                         $showroomId = (int)$record->showroom_id;
                         $valueForJs = $todayValueNumber !== null ? $todayValueNumber : 'null';
 
-                        $isAdmin = auth()->user()?->role === 'admin' ?? true;
+                        //$isAdmin = auth()->user()?->role === 'admin' ?? true;
+                        $isAdmin = true;
 
                         $editButtonHtml = $isAdmin
                             ? "
@@ -575,7 +576,7 @@ class ExpensesTable
                     ->label('Удалить')
                     ->icon('heroicon-o-trash')
                     ->button()
-                    ->visible(fn() => auth()->user()?->role === 'admin')
+                    //->visible(fn() => (auth()->user()?->role === 'admin' ||  auth()->user()?->role === 'manager'))
                     ->size('xs')
                     ->color('danger')
 
