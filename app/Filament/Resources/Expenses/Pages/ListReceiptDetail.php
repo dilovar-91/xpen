@@ -147,6 +147,7 @@ class ListReceiptDetail extends ListRecords
         return match ($type) {
             'addReceiptItem' => Action::make('addReceiptItem')
                 ->label('Добавить оплату по расписке')
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->icon('heroicon-o-arrow-up-circle')
                 ->color('success')
                 ->slideOver()

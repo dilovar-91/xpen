@@ -278,6 +278,7 @@ class ExpensesTable
                     ->icon('heroicon-o-arrow-up-circle')
                     ->color('success')
                     ->slideOver()
+                    ->visible(fn () => auth()->user()?->role !== 'guest')
                     ->mountUsing(function (Form $form, $livewire) {
 
                         $showroomId = $livewire->showroomId ?? request()->route('showroom') ?? request()->query('showroom_id');
@@ -293,6 +294,7 @@ class ExpensesTable
                     ->label('Добавить расход')
                     ->icon('heroicon-o-arrow-down-circle')
                     ->color('danger')
+                    ->visible(fn () => auth()->user()?->role !== 'guest')
                     ->slideOver()
                     ->mountUsing(function (Form $form, $livewire) {
                         $showroomId = $livewire->showroomId ?? request()->route('showroom_id');

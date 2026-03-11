@@ -115,6 +115,7 @@ class ListReceiptByShowroom extends ListRecords
         return match ($type) {
             'addReceipt' => Action::make('addReceipt')
                 ->label('Добавить расписку')
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->icon('heroicon-o-arrow-up-circle')
                 ->color('success')
                 ->slideOver()

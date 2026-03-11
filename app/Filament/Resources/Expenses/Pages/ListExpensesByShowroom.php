@@ -126,6 +126,7 @@ class ListExpensesByShowroom extends ListRecords
                 ->label('Добавить приход')
                 ->icon('heroicon-o-arrow-up-circle')
                 ->color('success')
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->slideOver()
                 ->form(fn () => ExpenseResource::getExpenseForm(1))
                 ->action(fn (array $data) => \App\Models\Expense::create($data)),
@@ -133,6 +134,7 @@ class ListExpensesByShowroom extends ListRecords
                 ->label('Добавить расход')
                 ->icon('heroicon-o-arrow-down-circle')
                 ->color('danger')
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->slideOver()
                 ->form(fn () => ExpenseResource::getExpenseForm(2))
                 ->action(fn (array $data) => \App\Models\Expense::create($data)),

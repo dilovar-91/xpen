@@ -70,12 +70,14 @@ class ListExpenses extends ListRecords
                 ->icon('heroicon-o-arrow-up-circle')
                 ->color('success')
                 ->slideOver()
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->form(fn () => ExpenseResource::getExpenseForm(1))
                 ->action(fn (array $data) => Expense::create($data)),
             'addExpense' => Action::make('addExpense')
                 ->label('Добавить расход')
                 ->icon('heroicon-o-arrow-down-circle')
                 ->color('danger')
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->slideOver()
                 ->schema(fn () => ExpenseResource::getExpenseForm(
                     1,

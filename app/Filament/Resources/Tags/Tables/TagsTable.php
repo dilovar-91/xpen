@@ -65,6 +65,7 @@ class TagsTable
             CreateAction::make()
                 ->label('Добавить тег')
                 ->icon('heroicon-o-plus')
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->slideover(),
         ];
     }

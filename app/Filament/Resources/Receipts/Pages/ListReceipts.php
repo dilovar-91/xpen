@@ -28,7 +28,9 @@ class ListReceipts extends ListRecords
                 ->label('Добавить приход')
                 ->icon('heroicon-o-arrow-up-circle')
                 ->color('success')
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->slideOver()
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->form(fn () => ReceiptResource::getReceiptForm(1))
                 ->action(fn (array $data) => Receipt::create($data)),
 
@@ -39,6 +41,7 @@ class ListReceipts extends ListRecords
                 ->icon('heroicon-o-pencil-square')
                 ->color('primary')
                 ->button()
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->slideOver()
                 ->size('xs')
                 ->successNotificationTitle('Изменения сохранены')

@@ -15,6 +15,7 @@ class ListTags extends ListRecords
         return [
             CreateAction::make()
                 ->label('Добавить тег')
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->icon('heroicon-o-plus')
                 ->slideover(),
         ];
