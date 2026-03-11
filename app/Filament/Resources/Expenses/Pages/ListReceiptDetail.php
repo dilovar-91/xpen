@@ -77,10 +77,11 @@ class ListReceiptDetail extends ListRecords
             ->actions([
                 EditAction::make()
                     ->slideOver()
+                    ->visible(fn () => auth()->user()?->role !== 'guest')
                     ->form(fn(ReceiptItem $record) => self::getReceiptItemForm($record->receipt_id))
                     ->action(fn(ReceiptItem $record, array $data) => $record->update($data)),
 
-                DeleteAction::make(),
+                DeleteAction::make()->visible(fn () => auth()->user()?->role !== 'guest'),
             ])
             ->defaultSort('date', 'desc');
     }
@@ -157,6 +158,7 @@ class ListReceiptDetail extends ListRecords
                 ->label('Расписка погашена')
                 ->icon('heroicon-o-check')
                 ->button()
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->size('xs')
                 ->color('danger')
                 ->requiresConfirmation()

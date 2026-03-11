@@ -183,6 +183,7 @@ class ReceiptsTable
                     ->icon('heroicon-o-pencil-square')
                     ->button()
                     ->size('xs')
+                    ->visible(fn () => auth()->user()?->role !== 'guest')
                     ->slideOver()
                     ->color('warning')
                     ->visible(fn() => auth()->user()?->role === 'admin')
@@ -194,6 +195,7 @@ class ReceiptsTable
                     ->button()
                     ->size('xs')
                     ->color('success')
+
                     //->visible(fn() => auth()->user()?->role === 'admin')
                     ->url(fn ($record) => ExpenseResource::getUrl(
                         'showroom-receipt-detail',

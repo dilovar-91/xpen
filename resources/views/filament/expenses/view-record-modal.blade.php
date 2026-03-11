@@ -9,24 +9,30 @@
         @endif
     </div>
 
-    <div class="pt-3 flex items-center gap-2">
-        {{-- Кнопка "Изменить" внутри модалки: вызывает EditAction для текущей записи --}}
-        <x-filament::button
-            color="success"
-            icon="heroicon-o-pencil-square"
-            x-on:click="$dispatch('mount-action', { name: 'edit', arguments: { record: {{ (int) $record->getKey() }} } })"
-        >
-            Изменить
-        </x-filament::button>
+    @auth
+        @if(auth()->user()->role !== 'guest')
+            <div class="pt-3 flex items-center gap-2">
 
-        {{-- При желании: кнопка на страницу редактирования --}}
-        <x-filament::button
-            color="gray"
-            icon="heroicon-o-arrow-right"
-            tag="a"
-            href="{{ route('filament.admin.resources.expenses.edit', ['record' => $record]) }}"
-        >
-            Открыть страницу
-        </x-filament::button>
-    </div>
+                <x-filament::button
+                    color="success"
+                    icon="heroicon-o-pencil-square"
+                    x-on:click="$dispatch('mount-action', { name: 'edit', arguments: { record: {{ (int) $record->getKey() }} } })"
+                >
+                    Изменить
+                </x-filament::button>
+
+                <x-filament::button
+                    color="gray"
+                    icon="heroicon-o-arrow-right"
+                    tag="a"
+                    href="{{ route('filament.admin.resources.expenses.edit', ['record' => $record]) }}"
+                >
+                    Открыть страницу
+                </x-filament::button>
+
+            </div>
+        @endif
+    @endauth
+
+
 </div>

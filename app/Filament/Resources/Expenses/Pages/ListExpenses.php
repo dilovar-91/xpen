@@ -92,6 +92,7 @@ class ListExpenses extends ListRecords
                 ->icon('heroicon-o-pencil-square')
                 ->color('primary')
                 ->button()
+                ->visible(fn () => auth()->user()?->role !== 'guest')
                 ->slideOver()
                 ->size('xs')
                 ->successNotificationTitle('Изменения сохранены')

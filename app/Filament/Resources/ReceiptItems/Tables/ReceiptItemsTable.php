@@ -36,11 +36,11 @@ class ReceiptItemsTable
                 //
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()->visible(fn () => auth()->user()?->role !== 'guest'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()->visible(fn () => auth()->user()?->role !== 'guest'),
                 ]),
             ]);
     }

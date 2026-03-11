@@ -314,6 +314,7 @@ class ExpensesTable
                 Action::make('editClosingBalance')
                     ->label('Изменить остаток')
                     ->hiddenLabel()
+                    ->visible(fn () => auth()->user()?->role !== 'guest')
                     ->modalHeading(function (Action $action) {
                         $args = $action->getArguments();
 
@@ -571,13 +572,14 @@ class ExpensesTable
                     ->button()
                     ->size('xs')
                     ->color('success')
-                    //->visible(fn() => auth()->user()?->role === 'admin')
+                    ->visible(fn () => auth()->user()?->role !== 'guest')
                     ->slideOver()
                     ->modalHeading('Редактирование'),
                 DeleteAction::make('delete')
                     ->label('Удалить')
                     ->icon('heroicon-o-trash')
                     ->button()
+                    ->visible(fn () => auth()->user()?->role !== 'guest')
                     //->visible(fn() => (auth()->user()?->role === 'admin' ||  auth()->user()?->role === 'manager'))
                     ->size('xs')
                     ->color('danger')
